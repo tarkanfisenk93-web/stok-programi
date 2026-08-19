@@ -115,7 +115,6 @@ function setupNavigation() {
         products: 'Ürünler',
         purchase: 'Satın Alma',
         sales: 'Satış',
-        movements: 'Stok Hareketleri',
         parties: 'Cari / Müşteriler',
         documents: 'Faturalar',
         reports: 'Raporlar'
@@ -146,10 +145,6 @@ function setupNavigation() {
 
       if (page === 'sales') {
         prepareSalePage();
-      }
-
-      if (page === 'movements') {
-        renderMovements();
       }
 
       if (page === 'parties') {
@@ -552,6 +547,13 @@ function renderProducts() {
                   Sil
                 </button>
 
+                <button
+                  class="movement-button"
+                  onclick="openProductMovements('${p.id}')"
+                >
+                  Hareketler
+                </button>
+
               </td>
 
             </tr>
@@ -622,8 +624,16 @@ function openProductForm(id = null) {
             id="formProductStock"
             type="number"
             step="0.01"
+            min="0"
+            ${id ? 'readonly' : ''}
             value="${num(p?.stock_quantity)}"
           >
+
+          ${id ? `
+            <small class="field-help">
+              Stok miktarı satın alma ve satış faturalarından güncellenir.
+            </small>
+          ` : ''}
 
         </div>
 
@@ -705,6 +715,103 @@ function editProduct(id) {
 }
 
 
+function openProductMovements(id) {
+
+  const product =
+    products.find(p => p.id === id);
+
+  if (!product) {
+    toast('Ürün bulunamadı.');
+    return;
+  }
+
+  const list = movements.filter(
+    m => m.product_id === id
+  );
+
+  const rows = list.map(m => {
+
+    const document =
+      m.source_type === 'purchase'
+        ? purchases.find(x => x.id === m.source_id)
+        : m.source_type === 'sale'
+          ? sales.find(x => x.id === m.source_id)
+          : null;
+
+    const party = parties.find(
+      x => x.id === (m.party_id || document?.party_id)
+    );
+
+    const documentType =
+      m.source_type === 'purchase'
+        ? 'Satın Alma'
+        : m.source_type === 'sale'
+          ? 'Satış'
+          : 'Başlangıç';
+
+    const date = document?.invoice_date || m.created_at;
+
+    const description =
+      m.source_type === 'purchase'
+        ? `${party?.name || 'Tedarikçi belirtilmedi'} firmasından satın alma`
+        : m.source_type === 'sale'
+          ? `${party?.name || 'Müşteri belirtilmedi'} firmasına satış`
+          : (m.note || 'Başlangıç stoğu');
+
+    return `
+      <tr>
+        <td>${date ? new Date(date).toLocaleDateString('tr-TR') : '-'}</td>
+        <td>
+          <span class="badge ${m.type === 'in' ? 'badge-in' : 'badge-out'}">
+            ${m.type === 'in' ? 'Giriş' : 'Çıkış'}
+          </span>
+        </td>
+        <td>${num(m.quantity)}</td>
+        <td>${esc(documentType)}</td>
+        <td>${esc(document?.invoice_no || '-')}</td>
+        <td>${esc(party?.name || '-')}</td>
+        <td>${esc(description)}</td>
+      </tr>
+    `;
+
+  }).join('');
+
+  openModal(
+    `${product.code} - ${product.name} Hareketleri`,
+    `
+      <div class="movement-summary">
+        <span>Mevcut Stok</span>
+        <strong>${num(product.stock_quantity)}</strong>
+      </div>
+
+      <div class="table-scroll">
+        ${list.length ? `
+          <table>
+            <thead>
+              <tr>
+                <th>Tarih</th>
+                <th>Hareket</th>
+                <th>Miktar</th>
+                <th>Kaynak</th>
+                <th>Fatura No</th>
+                <th>Cari</th>
+                <th>Açıklama</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        ` : '<div class="empty">Bu ürüne ait stok hareketi bulunamadı.</div>'}
+      </div>
+
+      <div class="form-buttons">
+        <button class="secondary" onclick="closeModal()">Kapat</button>
+      </div>
+    `
+  );
+
+}
+
+
 async function saveProduct(id) {
 
   const data = {
@@ -718,11 +825,6 @@ async function saveProduct(id) {
       $('formProductName')
         .value
         .trim(),
-
-    stock_quantity:
-      num(
-        $('formProductStock').value
-      ),
 
     critical_stock:
       num(
@@ -740,6 +842,12 @@ async function saveProduct(id) {
       )
 
   };
+
+  if (!id) {
+    data.stock_quantity = num(
+      $('formProductStock').value
+    );
+  }
 
   if (!data.code || !data.name) {
 
@@ -2141,7 +2249,7 @@ async function savePurchase() {
               id,
 
             note:
-              `Alış faturası ${invoiceNo || ''}`
+              `${parties.find(x => x.id === partyId)?.name || 'Tedarikçi belirtilmedi'} firmasından satın alma${invoiceNo ? ` - Fatura: ${invoiceNo}` : ''}`
 
           });
 
@@ -2820,7 +2928,7 @@ async function saveSale() {
               id,
 
             note:
-              `Satış faturası ${invoiceNo || ''}`
+              `${parties.find(x => x.id === partyId)?.name || 'Müşteri belirtilmedi'} firmasına satış${invoiceNo ? ` - Fatura: ${invoiceNo}` : ''}`
 
           });
 

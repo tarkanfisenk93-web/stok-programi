@@ -1,4 +1,3 @@
-```javascript
 const db = window.supabaseClient;
 
 let products = [];
@@ -15,18 +14,10 @@ let saleItems = [];
    BAŞLANGIÇ
 ========================================================= */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
 
   setupNavigation();
-  setupEvents();
   setDefaultDates();
-
-  loadAll();
-
-});
-
-
-function setupEvents() {
 
   document
     .getElementById("refreshBtn")
@@ -36,23 +27,71 @@ function setupEvents() {
     .getElementById("productSearch")
     ?.addEventListener("input", renderProducts);
 
-  document.addEventListener("keydown", event => {
+  await loadAll();
 
-    if (event.key === "Escape") {
-      closeModal();
-    }
+});
 
-  });
 
-  document.addEventListener("click", event => {
+/* =========================================================
+   GENEL YARDIMCILAR
+========================================================= */
 
-    const modal = document.getElementById("modal");
+function number(value) {
+  return Number(value || 0);
+}
 
-    if (event.target === modal) {
-      closeModal();
-    }
 
-  });
+function money(value) {
+
+  return Number(value || 0).toLocaleString("tr-TR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }) + " ₺";
+
+}
+
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+
+function setText(id, value) {
+
+  const element = document.getElementById(id);
+
+  if (element) {
+    element.textContent = value;
+  }
+
+}
+
+
+function escapeHtml(value) {
+
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+}
+
+
+function showToast(message) {
+
+  const toast = document.getElementById("toast");
+
+  if (!toast) return;
+
+  toast.textContent = message;
+
+  toast.classList.add("show");
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 3000);
 
 }
 
@@ -63,25 +102,21 @@ function setupEvents() {
 
 function setupNavigation() {
 
-  const buttons = document.querySelectorAll(".menu");
-
-  buttons.forEach(button => {
+  document.querySelectorAll(".menu").forEach(button => {
 
     button.addEventListener("click", () => {
 
       const page = button.dataset.page;
 
-      if (!page) return;
-
-      buttons.forEach(item => {
-        item.classList.remove("active");
-      });
+      document
+        .querySelectorAll(".menu")
+        .forEach(x => x.classList.remove("active"));
 
       button.classList.add("active");
 
-      document.querySelectorAll(".page").forEach(section => {
-        section.classList.add("hidden");
-      });
+      document
+        .querySelectorAll(".page")
+        .forEach(x => x.classList.add("hidden"));
 
       const target = document.getElementById(page);
 
@@ -104,7 +139,7 @@ function setupNavigation() {
 
       setText(
         "pageTitle",
-        titles[page] || "BTF Stok"
+        titles[page] || "Stok Takip"
       );
 
 
@@ -150,90 +185,8 @@ function setupNavigation() {
 
 
 /* =========================================================
-   GENEL YARDIMCILAR
+   TARİHLER
 ========================================================= */
-
-function setText(id, value) {
-
-  const element = document.getElementById(id);
-
-  if (element) {
-    element.textContent = value;
-  }
-
-}
-
-
-function number(value) {
-
-  const result = Number(value);
-
-  return Number.isFinite(result) ? result : 0;
-
-}
-
-
-function money(value) {
-
-  return number(value).toLocaleString("tr-TR", {
-
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-
-  }) + " ₺";
-
-}
-
-
-function today() {
-
-  const date = new Date();
-
-  const year = date.getFullYear();
-
-  const month =
-    String(date.getMonth() + 1).padStart(2, "0");
-
-  const day =
-    String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-
-}
-
-
-function escapeHtml(value) {
-
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-
-}
-
-
-function showToast(message) {
-
-  const toast = document.getElementById("toast");
-
-  if (!toast) return;
-
-  toast.textContent = message;
-
-  toast.classList.add("show");
-
-  clearTimeout(window.toastTimer);
-
-  window.toastTimer = setTimeout(() => {
-
-    toast.classList.remove("show");
-
-  }, 3000);
-
-}
-
 
 function setDefaultDates() {
 
@@ -262,25 +215,21 @@ async function loadAll() {
 
   if (!db) {
 
-    showToast("Supabase bağlantısı bulunamadı.");
+    console.error(
+      "Supabase bağlantısı bulunamadı."
+    );
 
-    console.error("window.supabaseClient bulunamadı.");
+    showToast(
+      "Supabase bağlantısı bulunamadı."
+    );
 
     return;
-
   }
+
 
   try {
 
-    const [
-
-      productsResult,
-      partiesResult,
-      purchasesResult,
-      salesResult,
-      movementsResult
-
-    ] = await Promise.all([
+    const results = await Promise.all([
 
       db
         .from("products")
@@ -316,27 +265,29 @@ async function loadAll() {
     ]);
 
 
-    if (productsResult.error)
-      throw productsResult.error;
+    for (const result of results) {
 
-    if (partiesResult.error)
-      throw partiesResult.error;
+      if (result.error) {
+        throw result.error;
+      }
 
-    if (purchasesResult.error)
-      throw purchasesResult.error;
-
-    if (salesResult.error)
-      throw salesResult.error;
-
-    if (movementsResult.error)
-      throw movementsResult.error;
+    }
 
 
-    products = productsResult.data || [];
-    parties = partiesResult.data || [];
-    purchases = purchasesResult.data || [];
-    sales = salesResult.data || [];
-    movements = movementsResult.data || [];
+    products =
+      results[0].data || [];
+
+    parties =
+      results[1].data || [];
+
+    purchases =
+      results[2].data || [];
+
+    sales =
+      results[3].data || [];
+
+    movements =
+      results[4].data || [];
 
 
     renderDashboard();
@@ -349,17 +300,14 @@ async function loadAll() {
     preparePurchasePage();
     prepareSalePage();
 
-    renderPurchaseItems();
-    renderSaleItems();
-
-
-    console.log("Veriler başarıyla yüklendi.");
-
   }
 
   catch (error) {
 
-    console.error("loadAll:", error);
+    console.error(
+      "loadAll hatası:",
+      error
+    );
 
     showToast(
       "Veriler yüklenemedi: " +
@@ -383,53 +331,62 @@ function renderDashboard() {
 
   const totalStock =
     products.reduce(
-      (sum, product) =>
-        sum + number(product.stock_quantity),
+      (sum, p) =>
+        sum + number(p.stock_quantity),
       0
     );
 
 
-  const criticalProducts =
-    products.filter(product =>
-      number(product.stock_quantity) <=
-      number(product.critical_stock)
-    );
+  const critical =
+    products.filter(p =>
+      number(p.stock_quantity) <=
+      number(p.critical_stock)
+    ).length;
 
 
   const totalSales =
     sales.reduce(
-      (sum, sale) =>
-        sum + number(sale.total),
+      (sum, x) =>
+        sum + number(x.total),
       0
     );
 
 
   const totalPurchases =
     purchases.reduce(
-      (sum, purchase) =>
-        sum + number(purchase.total),
+      (sum, x) =>
+        sum + number(x.total),
       0
     );
 
 
   const todaySales =
     sales
-      .filter(sale =>
-        String(sale.invoice_date) === today()
+      .filter(x =>
+        x.invoice_date === today()
       )
       .reduce(
-        (sum, sale) =>
-          sum + number(sale.total),
+        (sum, x) =>
+          sum + number(x.total),
         0
       );
 
 
-  setText("totalProducts", totalProducts);
-  setText("totalStock", totalStock);
+  setText(
+    "totalProducts",
+    totalProducts
+  );
+
+  setText(
+    "totalStock",
+    totalStock
+  );
+
   setText(
     "criticalProducts",
-    criticalProducts.length
+    critical
   );
+
   setText(
     "totalParties",
     parties.length
@@ -447,7 +404,9 @@ function renderDashboard() {
 
   setText(
     "grossProfit",
-    money(totalSales - totalPurchases)
+    money(
+      totalSales - totalPurchases
+    )
   );
 
   setText(
@@ -462,6 +421,13 @@ function renderDashboard() {
     );
 
   if (!container) return;
+
+
+  const criticalProducts =
+    products.filter(p =>
+      number(p.stock_quantity) <=
+      number(p.critical_stock)
+    );
 
 
   if (!criticalProducts.length) {
@@ -493,24 +459,24 @@ function renderDashboard() {
 
       <tbody>
 
-        ${criticalProducts.map(product => `
+        ${criticalProducts.map(p => `
 
           <tr>
 
             <td>
-              ${escapeHtml(product.code)}
+              ${escapeHtml(p.code)}
             </td>
 
             <td>
-              ${escapeHtml(product.name)}
+              ${escapeHtml(p.name)}
             </td>
 
             <td class="text-danger">
-              ${number(product.stock_quantity)}
+              ${number(p.stock_quantity)}
             </td>
 
             <td>
-              ${number(product.critical_stock)}
+              ${number(p.critical_stock)}
             </td>
 
           </tr>
@@ -533,36 +499,35 @@ function renderDashboard() {
 function renderProducts() {
 
   const container =
-    document.getElementById("productsTable");
+    document.getElementById(
+      "productsTable"
+    );
 
   if (!container) return;
 
 
   const search =
-    String(
-      document.getElementById("productSearch")?.value || ""
-    )
-    .toLocaleLowerCase("tr-TR")
-    .trim();
+    (
+      document
+        .getElementById("productSearch")
+        ?.value || ""
+    ).toLowerCase();
 
 
   const filtered =
-    products.filter(product => {
+    products.filter(p =>
 
-      const code =
-        String(product.code || "")
-          .toLocaleLowerCase("tr-TR");
+      String(p.code || "")
+        .toLowerCase()
+        .includes(search)
 
-      const name =
-        String(product.name || "")
-          .toLocaleLowerCase("tr-TR");
+      ||
 
-      return (
-        code.includes(search) ||
-        name.includes(search)
-      );
+      String(p.name || "")
+        .toLowerCase()
+        .includes(search)
 
-    });
+    );
 
 
   if (!filtered.length) {
@@ -584,6 +549,7 @@ function renderProducts() {
       <thead>
 
         <tr>
+
           <th>Kod</th>
           <th>Ürün</th>
           <th>Stok</th>
@@ -592,45 +558,45 @@ function renderProducts() {
           <th>Satış</th>
           <th>Durum</th>
           <th>İşlem</th>
+
         </tr>
 
       </thead>
 
       <tbody>
 
-        ${filtered.map(product => {
+        ${filtered.map(p => {
 
           const critical =
-            number(product.stock_quantity) <=
-            number(product.critical_stock);
-
+            number(p.stock_quantity) <=
+            number(p.critical_stock);
 
           return `
 
             <tr>
 
               <td>
-                ${escapeHtml(product.code)}
+                ${escapeHtml(p.code)}
               </td>
 
               <td>
-                ${escapeHtml(product.name)}
+                ${escapeHtml(p.name)}
               </td>
 
               <td>
-                ${number(product.stock_quantity)}
+                ${number(p.stock_quantity)}
               </td>
 
               <td>
-                ${number(product.critical_stock)}
+                ${number(p.critical_stock)}
               </td>
 
               <td>
-                ${money(product.purchase_price)}
+                ${money(p.purchase_price)}
               </td>
 
               <td>
-                ${money(product.sale_price)}
+                ${money(p.sale_price)}
               </td>
 
               <td>
@@ -655,14 +621,14 @@ function renderProducts() {
 
                 <button
                   class="secondary"
-                  onclick="editProduct('${product.id}')"
+                  onclick="editProduct('${p.id}')"
                 >
                   Düzenle
                 </button>
 
                 <button
                   class="danger"
-                  onclick="deleteProduct('${product.id}')"
+                  onclick="deleteProduct('${p.id}')"
                 >
                   Sil
                 </button>
@@ -684,10 +650,16 @@ function renderProducts() {
 }
 
 
+/* =========================================================
+   ÜRÜN FORMU
+========================================================= */
+
 function openProductForm(id = null) {
 
   const product =
-    products.find(item => item.id === id);
+    products.find(
+      x => String(x.id) === String(id)
+    );
 
 
   openModal(
@@ -706,8 +678,9 @@ function openProductForm(id = null) {
 
           <input
             id="formProductCode"
-            required
-            value="${escapeHtml(product?.code || "")}"
+            value="${escapeHtml(
+              product?.code || ""
+            )}"
           >
 
         </div>
@@ -719,8 +692,9 @@ function openProductForm(id = null) {
 
           <input
             id="formProductName"
-            required
-            value="${escapeHtml(product?.name || "")}"
+            value="${escapeHtml(
+              product?.name || ""
+            )}"
           >
 
         </div>
@@ -734,7 +708,9 @@ function openProductForm(id = null) {
             id="formProductStock"
             type="number"
             step="0.01"
-            value="${number(product?.stock_quantity)}"
+            value="${number(
+              product?.stock_quantity
+            )}"
           >
 
         </div>
@@ -748,7 +724,9 @@ function openProductForm(id = null) {
             id="formProductCritical"
             type="number"
             step="0.01"
-            value="${number(product?.critical_stock || 5)}"
+            value="${number(
+              product?.critical_stock || 5
+            )}"
           >
 
         </div>
@@ -762,7 +740,9 @@ function openProductForm(id = null) {
             id="formProductPurchase"
             type="number"
             step="0.01"
-            value="${number(product?.purchase_price)}"
+            value="${number(
+              product?.purchase_price
+            )}"
           >
 
         </div>
@@ -776,7 +756,9 @@ function openProductForm(id = null) {
             id="formProductSale"
             type="number"
             step="0.01"
-            value="${number(product?.sale_price)}"
+            value="${number(
+              product?.sale_price
+            )}"
           >
 
         </div>
@@ -812,9 +794,7 @@ function openProductForm(id = null) {
 
 
 function editProduct(id) {
-
   openProductForm(id);
-
 }
 
 
@@ -836,25 +816,33 @@ async function saveProduct(id) {
 
   const stock =
     number(
-      document.getElementById("formProductStock").value
+      document
+        .getElementById("formProductStock")
+        .value
     );
 
 
   const critical =
     number(
-      document.getElementById("formProductCritical").value
+      document
+        .getElementById("formProductCritical")
+        .value
     );
 
 
   const purchase =
     number(
-      document.getElementById("formProductPurchase").value
+      document
+        .getElementById("formProductPurchase")
+        .value
     );
 
 
   const sale =
     number(
-      document.getElementById("formProductSale").value
+      document
+        .getElementById("formProductSale")
+        .value
     );
 
 
@@ -917,7 +905,9 @@ async function saveProduct(id) {
 
     closeModal();
 
-    showToast("Ürün kaydedildi.");
+    showToast(
+      "Ürün kaydedildi."
+    );
 
     await loadAll();
 
@@ -943,9 +933,7 @@ async function deleteProduct(id) {
     !confirm(
       "Bu ürünü silmek istediğinize emin misiniz?"
     )
-  ) {
-    return;
-  }
+  ) return;
 
 
   try {
@@ -962,7 +950,9 @@ async function deleteProduct(id) {
     }
 
 
-    showToast("Ürün silindi.");
+    showToast(
+      "Ürün silindi."
+    );
 
     await loadAll();
 
@@ -973,7 +963,7 @@ async function deleteProduct(id) {
     console.error(error);
 
     showToast(
-      "Ürün silinemedi. Bu ürün başka kayıtlarda kullanılıyor olabilir."
+      "Ürün silinemedi."
     );
 
   }
@@ -988,7 +978,9 @@ async function deleteProduct(id) {
 function renderParties() {
 
   const container =
-    document.getElementById("partiesTable");
+    document.getElementById(
+      "partiesTable"
+    );
 
   if (!container) return;
 
@@ -1012,54 +1004,62 @@ function renderParties() {
       <thead>
 
         <tr>
+
           <th>Unvan</th>
           <th>Tür</th>
           <th>Telefon</th>
           <th>E-posta</th>
           <th>Vergi No</th>
           <th>İşlem</th>
+
         </tr>
 
       </thead>
 
       <tbody>
 
-        ${parties.map(party => `
+        ${parties.map(p => `
 
           <tr>
 
             <td>
-              ${escapeHtml(party.name)}
+              ${escapeHtml(p.name)}
             </td>
 
             <td>
-              ${partyType(party.type)}
+              ${partyType(p.type)}
             </td>
 
             <td>
-              ${escapeHtml(party.phone || "-")}
+              ${escapeHtml(
+                p.phone || "-"
+              )}
             </td>
 
             <td>
-              ${escapeHtml(party.email || "-")}
+              ${escapeHtml(
+                p.email || "-"
+              )}
             </td>
 
             <td>
-              ${escapeHtml(party.tax_number || "-")}
+              ${escapeHtml(
+                p.tax_number || "-"
+              )}
             </td>
 
             <td>
 
               <button
                 class="secondary"
-                onclick="editParty('${party.id}')"
+                onclick="editParty('${p.id}')"
               >
                 Düzenle
               </button>
 
               <button
                 class="danger"
-                onclick="deleteParty('${party.id}')"
+                onclick="deleteParty('${p.id}')"
               >
                 Sil
               </button>
@@ -1097,7 +1097,9 @@ function partyType(type) {
 function openPartyForm(id = null) {
 
   const party =
-    parties.find(item => item.id === id);
+    parties.find(
+      x => String(x.id) === String(id)
+    );
 
 
   openModal(
@@ -1114,8 +1116,9 @@ function openPartyForm(id = null) {
 
         <input
           id="formPartyName"
-          required
-          value="${escapeHtml(party?.name || "")}"
+          value="${escapeHtml(
+            party?.name || ""
+          )}"
         >
 
       </div>
@@ -1131,21 +1134,33 @@ function openPartyForm(id = null) {
 
             <option
               value="customer"
-              ${party?.type === "customer" ? "selected" : ""}
+              ${
+                party?.type === "customer"
+                  ? "selected"
+                  : ""
+              }
             >
               Müşteri
             </option>
 
             <option
               value="supplier"
-              ${party?.type === "supplier" ? "selected" : ""}
+              ${
+                party?.type === "supplier"
+                  ? "selected"
+                  : ""
+              }
             >
               Tedarikçi
             </option>
 
             <option
               value="both"
-              ${party?.type === "both" ? "selected" : ""}
+              ${
+                party?.type === "both"
+                  ? "selected"
+                  : ""
+              }
             >
               Müşteri + Tedarikçi
             </option>
@@ -1161,7 +1176,9 @@ function openPartyForm(id = null) {
 
           <input
             id="formPartyPhone"
-            value="${escapeHtml(party?.phone || "")}"
+            value="${escapeHtml(
+              party?.phone || ""
+            )}"
           >
 
         </div>
@@ -1173,7 +1190,9 @@ function openPartyForm(id = null) {
 
           <input
             id="formPartyEmail"
-            value="${escapeHtml(party?.email || "")}"
+            value="${escapeHtml(
+              party?.email || ""
+            )}"
           >
 
         </div>
@@ -1185,7 +1204,9 @@ function openPartyForm(id = null) {
 
           <input
             id="formPartyTax"
-            value="${escapeHtml(party?.tax_number || "")}"
+            value="${escapeHtml(
+              party?.tax_number || ""
+            )}"
           >
 
         </div>
@@ -1232,38 +1253,24 @@ function openPartyForm(id = null) {
 
 
 function editParty(id) {
-
   openPartyForm(id);
-
 }
 
 
 async function saveParty(id) {
 
-  const name =
-    document
-      .getElementById("formPartyName")
-      .value
-      .trim();
-
-
-  if (!name) {
-
-    showToast(
-      "Unvan / Ad Soyad zorunludur."
-    );
-
-    return;
-
-  }
-
-
   const data = {
 
-    name,
+    name:
+      document
+        .getElementById("formPartyName")
+        .value
+        .trim(),
 
     type:
-      document.getElementById("formPartyType").value,
+      document
+        .getElementById("formPartyType")
+        .value,
 
     phone:
       document
@@ -1290,6 +1297,17 @@ async function saveParty(id) {
         .trim()
 
   };
+
+
+  if (!data.name) {
+
+    showToast(
+      "Unvan / Ad Soyad zorunludur."
+    );
+
+    return;
+
+  }
 
 
   try {
@@ -1324,7 +1342,9 @@ async function saveParty(id) {
 
     closeModal();
 
-    showToast("Cari kaydedildi.");
+    showToast(
+      "Cari kaydedildi."
+    );
 
     await loadAll();
 
@@ -1350,9 +1370,7 @@ async function deleteParty(id) {
     !confirm(
       "Bu cariyi silmek istediğinize emin misiniz?"
     )
-  ) {
-    return;
-  }
+  ) return;
 
 
   try {
@@ -1369,7 +1387,9 @@ async function deleteParty(id) {
     }
 
 
-    showToast("Cari silindi.");
+    showToast(
+      "Cari silindi."
+    );
 
     await loadAll();
 
@@ -1380,7 +1400,7 @@ async function deleteParty(id) {
     console.error(error);
 
     showToast(
-      "Bu cari başka kayıtlarda kullanılıyor olabilir."
+      "Bu cari kullanıldığı için silinemiyor."
     );
 
   }
@@ -1394,26 +1414,36 @@ async function deleteParty(id) {
 
 function openModal(title, content) {
 
+  const titleElement =
+    document.getElementById(
+      "modalTitle"
+    );
+
+  const form =
+    document.getElementById(
+      "modalForm"
+    );
+
   const modal =
-    document.getElementById("modal");
-
-  const modalTitle =
-    document.getElementById("modalTitle");
-
-  const modalForm =
-    document.getElementById("modalForm");
+    document.getElementById(
+      "modal"
+    );
 
 
-  if (!modal || !modalTitle || !modalForm) {
+  if (!titleElement || !form || !modal) {
     return;
   }
 
 
-  modalTitle.textContent = title;
+  titleElement.textContent =
+    title;
 
-  modalForm.innerHTML = content;
+  form.innerHTML =
+    content;
 
-  modal.classList.remove("hidden");
+  modal.classList.remove(
+    "hidden"
+  );
 
 }
 
@@ -1421,111 +1451,21 @@ function openModal(title, content) {
 function closeModal() {
 
   const modal =
-    document.getElementById("modal");
-
-  if (modal) {
-    modal.classList.add("hidden");
-  }
-
-}
-
-
-/* =========================================================
-   ÜRÜN / CARİ SELECTLERİ
-========================================================= */
-
-function fillProductSelect(id) {
-
-  const select =
-    document.getElementById(id);
-
-  if (!select) return;
-
-
-  const oldValue = select.value;
-
-
-  select.innerHTML =
-    `<option value="">
-      Ürün seçin...
-    </option>` +
-
-    products.map(product => `
-
-      <option value="${product.id}">
-
-        ${escapeHtml(product.code)}
-        -
-        ${escapeHtml(product.name)}
-
-      </option>
-
-    `).join("");
-
-
-  if (
-    oldValue &&
-    products.some(p =>
-      String(p.id) === String(oldValue)
-    )
-  ) {
-
-    select.value = oldValue;
-
-  }
-
-}
-
-
-function fillPartySelect(id, allowedTypes) {
-
-  const select =
-    document.getElementById(id);
-
-  if (!select) return;
-
-
-  const oldValue = select.value;
-
-
-  const filtered =
-    parties.filter(party =>
-      allowedTypes.includes(party.type)
+    document.getElementById(
+      "modal"
     );
 
-
-  select.innerHTML =
-    `<option value="">
-      Cari seçin...
-    </option>` +
-
-    filtered.map(party => `
-
-      <option value="${party.id}">
-
-        ${escapeHtml(party.name)}
-
-      </option>
-
-    `).join("");
-
-
-  if (
-    oldValue &&
-    filtered.some(p =>
-      String(p.id) === String(oldValue)
-    )
-  ) {
-
-    select.value = oldValue;
-
+  if (modal) {
+    modal.classList.add(
+      "hidden"
+    );
   }
 
 }
 
 
 /* =========================================================
-   ALIŞ HAZIRLIK
+   SATIN ALMA
 ========================================================= */
 
 function preparePurchasePage() {
@@ -1542,23 +1482,91 @@ function preparePurchasePage() {
 }
 
 
+function fillProductSelect(id) {
+
+  const select =
+    document.getElementById(id);
+
+  if (!select) return;
+
+
+  select.innerHTML =
+    `<option value="">
+      Ürün seçin...
+    </option>` +
+
+    products.map(p => `
+
+      <option value="${p.id}">
+        ${escapeHtml(p.code)}
+        -
+        ${escapeHtml(p.name)}
+      </option>
+
+    `).join("");
+
+}
+
+
+function fillPartySelect(
+  id,
+  allowedTypes
+) {
+
+  const select =
+    document.getElementById(id);
+
+  if (!select) return;
+
+
+  const filtered =
+    parties.filter(p =>
+      allowedTypes.includes(p.type)
+    );
+
+
+  select.innerHTML =
+    `<option value="">
+      Cari seçin...
+    </option>` +
+
+    filtered.map(p => `
+
+      <option value="${p.id}">
+        ${escapeHtml(p.name)}
+      </option>
+
+    `).join("");
+
+}
+
+
 /* =========================================================
-   ALIŞ ÜRÜN EKLE
+   SATIN ALMA ÜRÜN EKLE
+   ÖNEMLİ: TEK BİR FONKSİYON
 ========================================================= */
 
 function addPurchaseItem() {
 
   const productSelect =
-    document.getElementById("purchaseProduct");
+    document.getElementById(
+      "purchaseProduct"
+    );
 
   const qtyInput =
-    document.getElementById("purchaseQty");
+    document.getElementById(
+      "purchaseQty"
+    );
 
   const priceInput =
-    document.getElementById("purchasePrice");
+    document.getElementById(
+      "purchasePrice"
+    );
 
   const vatSelect =
-    document.getElementById("purchaseVat");
+    document.getElementById(
+      "purchaseVat"
+    );
 
 
   if (
@@ -1580,14 +1588,23 @@ function addPurchaseItem() {
   const productId =
     productSelect.value;
 
+
   const qty =
-    number(qtyInput.value);
+    number(
+      qtyInput.value
+    );
+
 
   const price =
-    number(priceInput.value);
+    number(
+      priceInput.value
+    );
+
 
   const vat =
-    number(vatSelect.value);
+    number(
+      vatSelect.value
+    );
 
 
   if (!productId) {
@@ -1625,8 +1642,8 @@ function addPurchaseItem() {
 
   const product =
     products.find(
-      item =>
-        String(item.id) ===
+      p =>
+        String(p.id) ===
         String(productId)
     );
 
@@ -1644,17 +1661,23 @@ function addPurchaseItem() {
 
   purchaseItems.push({
 
-    product_id: product.id,
+    product_id:
+      product.id,
 
-    product_name: product.name,
+    product_name:
+      product.name,
 
-    code: product.code,
+    code:
+      product.code,
 
-    quantity: qty,
+    quantity:
+      qty,
 
-    unit_price: price,
+    unit_price:
+      price,
 
-    vat_rate: vat
+    vat_rate:
+      vat
 
   });
 
@@ -1662,7 +1685,9 @@ function addPurchaseItem() {
   qtyInput.value = "";
   priceInput.value = "";
 
+
   renderPurchaseItems();
+
 
   showToast(
     "Ürün faturaya eklendi."
@@ -1672,13 +1697,15 @@ function addPurchaseItem() {
 
 
 /* =========================================================
-   ALIŞ KALEMLERİ
+   SATIN ALMA KALEMLERİ
 ========================================================= */
 
 function renderPurchaseItems() {
 
   const container =
-    document.getElementById("purchaseItems");
+    document.getElementById(
+      "purchaseItems"
+    );
 
   if (!container) return;
 
@@ -1704,6 +1731,7 @@ function renderPurchaseItems() {
       <thead>
 
         <tr>
+
           <th>#</th>
           <th>Ürün</th>
           <th>Miktar</th>
@@ -1713,83 +1741,89 @@ function renderPurchaseItems() {
           <th>KDV Tutarı</th>
           <th>Toplam</th>
           <th></th>
+
         </tr>
 
       </thead>
 
       <tbody>
 
-        ${purchaseItems.map((item, index) => {
+        ${purchaseItems.map(
+          (item, index) => {
 
-          const subtotal =
-            number(item.quantity) *
-            number(item.unit_price);
+            const subtotal =
+              item.quantity *
+              item.unit_price;
+
+            const vatAmount =
+              subtotal *
+              item.vat_rate /
+              100;
+
+            const total =
+              subtotal +
+              vatAmount;
 
 
-          const vatAmount =
-            subtotal *
-            number(item.vat_rate) /
-            100;
+            return `
 
+              <tr>
 
-          const total =
-            subtotal + vatAmount;
+                <td>
+                  ${index + 1}
+                </td>
 
+                <td>
+                  ${escapeHtml(item.code)}
+                  -
+                  ${escapeHtml(
+                    item.product_name
+                  )}
+                </td>
 
-          return `
+                <td>
+                  ${item.quantity}
+                </td>
 
-            <tr>
+                <td>
+                  ${money(
+                    item.unit_price
+                  )}
+                </td>
 
-              <td>
-                ${index + 1}
-              </td>
+                <td>
+                  %${item.vat_rate}
+                </td>
 
-              <td>
-                ${escapeHtml(item.code)}
-                -
-                ${escapeHtml(item.product_name)}
-              </td>
+                <td>
+                  ${money(subtotal)}
+                </td>
 
-              <td>
-                ${number(item.quantity)}
-              </td>
+                <td>
+                  ${money(vatAmount)}
+                </td>
 
-              <td>
-                ${money(item.unit_price)}
-              </td>
+                <td>
+                  ${money(total)}
+                </td>
 
-              <td>
-                %${number(item.vat_rate)}
-              </td>
+                <td>
 
-              <td>
-                ${money(subtotal)}
-              </td>
+                  <button
+                    class="item-remove"
+                    onclick="removePurchaseItem(${index})"
+                  >
+                    ✕
+                  </button>
 
-              <td>
-                ${money(vatAmount)}
-              </td>
+                </td>
 
-              <td>
-                ${money(total)}
-              </td>
+              </tr>
 
-              <td>
+            `;
 
-                <button
-                  class="item-remove"
-                  onclick="removePurchaseItem(${index})"
-                >
-                  ✕
-                </button>
-
-              </td>
-
-            </tr>
-
-          `;
-
-        }).join("")}
+          }
+        ).join("")}
 
       </tbody>
 
@@ -1805,7 +1839,10 @@ function renderPurchaseItems() {
 
 function removePurchaseItem(index) {
 
-  purchaseItems.splice(index, 1);
+  purchaseItems.splice(
+    index,
+    1
+  );
 
   renderPurchaseItems();
 
@@ -1815,23 +1852,20 @@ function removePurchaseItem(index) {
 function calculatePurchaseTotals() {
 
   let subtotal = 0;
-
   let vatTotal = 0;
 
 
   purchaseItems.forEach(item => {
 
     const line =
-      number(item.quantity) *
-      number(item.unit_price);
-
+      item.quantity *
+      item.unit_price;
 
     subtotal += line;
 
-
     vatTotal +=
       line *
-      number(item.vat_rate) /
+      item.vat_rate /
       100;
 
   });
@@ -1842,23 +1876,22 @@ function calculatePurchaseTotals() {
     money(subtotal)
   );
 
-
   setText(
     "purchaseVatTotal",
     money(vatTotal)
   );
 
-
   setText(
     "purchaseGrandTotal",
-    money(subtotal + vatTotal)
+    money(
+      subtotal + vatTotal
+    )
   );
 
 
   return {
 
     subtotal,
-
     vatTotal,
 
     total:
@@ -1870,232 +1903,7 @@ function calculatePurchaseTotals() {
 
 
 /* =========================================================
-   ALIŞ FATURASI KAYDET
-========================================================= */
-
-async function savePurchase() {
-
-  if (!purchaseItems.length) {
-
-    showToast(
-      "Faturaya en az bir ürün ekleyin."
-    );
-
-    return;
-
-  }
-
-
-  const partyId =
-    document.getElementById("purchaseParty").value || null;
-
-
-  const invoiceNo =
-    document
-      .getElementById("purchaseInvoiceNo")
-      .value
-      .trim();
-
-
-  const invoiceDate =
-    document.getElementById("purchaseDate").value ||
-    today();
-
-
-  const note =
-    document
-      .getElementById("purchaseNote")
-      .value
-      .trim();
-
-
-  const totals =
-    calculatePurchaseTotals();
-
-
-  try {
-
-    const purchaseResult =
-      await db
-        .from("purchases")
-        .insert({
-
-          invoice_no: invoiceNo,
-
-          party_id: partyId,
-
-          invoice_date: invoiceDate,
-
-          subtotal: totals.subtotal,
-
-          vat_rate: 0,
-
-          vat_amount: totals.vatTotal,
-
-          total: totals.total,
-
-          note
-
-        })
-        .select()
-        .single();
-
-
-    if (purchaseResult.error) {
-      throw purchaseResult.error;
-    }
-
-
-    const purchaseId =
-      purchaseResult.data.id;
-
-
-    const items =
-      purchaseItems.map(item => {
-
-        const subtotal =
-          number(item.quantity) *
-          number(item.unit_price);
-
-
-        const vatAmount =
-          subtotal *
-          number(item.vat_rate) /
-          100;
-
-
-        return {
-
-          purchase_id: purchaseId,
-
-          product_id: item.product_id,
-
-          quantity: item.quantity,
-
-          unit_price: item.unit_price,
-
-          vat_rate: item.vat_rate,
-
-          line_subtotal: subtotal,
-
-          vat_amount: vatAmount,
-
-          line_total:
-            subtotal + vatAmount
-
-        };
-
-      });
-
-
-    const itemsResult =
-      await db
-        .from("purchase_items")
-        .insert(items);
-
-
-    if (itemsResult.error) {
-      throw itemsResult.error;
-    }
-
-
-    for (const item of purchaseItems) {
-
-      const product =
-        products.find(
-          p => p.id === item.product_id
-        );
-
-
-      if (!product) continue;
-
-
-      const newStock =
-        number(product.stock_quantity) +
-        number(item.quantity);
-
-
-      const updateResult =
-        await db
-          .from("products")
-          .update({
-
-            stock_quantity: newStock,
-
-            purchase_price:
-              item.unit_price
-
-          })
-          .eq("id", item.product_id);
-
-
-      if (updateResult.error) {
-        throw updateResult.error;
-      }
-
-
-      const movementResult =
-        await db
-          .from("stock_movements")
-          .insert({
-
-            product_id:
-              item.product_id,
-
-            party_id:
-              partyId,
-
-            type: "in",
-
-            quantity:
-              item.quantity,
-
-            source_type:
-              "purchase",
-
-            source_id:
-              purchaseId,
-
-            note:
-              `Alış faturası ${invoiceNo || ""}`
-
-          });
-
-
-      if (movementResult.error) {
-        throw movementResult.error;
-      }
-
-    }
-
-
-    showToast(
-      "Alış faturası başarıyla kaydedildi."
-    );
-
-
-    clearPurchase();
-
-    await loadAll();
-
-  }
-
-  catch (error) {
-
-    console.error(error);
-
-    showToast(
-      "Alış faturası kaydedilemedi: " +
-      error.message
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   SATIŞ HAZIRLIK
+   SATIŞ
 ========================================================= */
 
 function prepareSalePage() {
@@ -2112,60 +1920,71 @@ function prepareSalePage() {
 }
 
 
-/* =========================================================
-   SATIŞ ÜRÜN EKLE
-========================================================= */
-
 function addSaleItem() {
 
+  const productSelect =
+    document.getElementById(
+      "saleProduct"
+    );
+
+  const qtyInput =
+    document.getElementById(
+      "saleQty"
+    );
+
+  const priceInput =
+    document.getElementById(
+      "salePrice"
+    );
+
+  const vatSelect =
+    document.getElementById(
+      "saleVat"
+    );
+
+
+  if (
+    !productSelect ||
+    !qtyInput ||
+    !priceInput ||
+    !vatSelect
+  ) {
+
+    showToast(
+      "Satış alanları bulunamadı."
+    );
+
+    return;
+
+  }
+
+
   const productId =
-    document.getElementById("saleProduct").value;
+    productSelect.value;
 
 
   const qty =
     number(
-      document.getElementById("saleQty").value
+      qtyInput.value
     );
 
 
   const price =
     number(
-      document.getElementById("salePrice").value
+      priceInput.value
     );
 
 
   const vat =
     number(
-      document.getElementById("saleVat").value
+      vatSelect.value
     );
 
 
-  if (!productId) {
+  if (!productId || qty <= 0) {
 
     showToast(
-      "Lütfen ürün seçin."
-    );
-
-    return;
-
-  }
-
-
-  if (qty <= 0) {
-
-    showToast(
-      "Lütfen miktar girin."
-    );
-
-    return;
-
-  }
-
-
-  if (price < 0) {
-
-    showToast(
-      "Birim fiyatı kontrol edin."
+      "Ürün ve miktar seçmelisiniz."
     );
 
     return;
@@ -2175,8 +1994,8 @@ function addSaleItem() {
 
   const product =
     products.find(
-      item =>
-        String(item.id) ===
+      p =>
+        String(p.id) ===
         String(productId)
     );
 
@@ -2195,13 +2014,13 @@ function addSaleItem() {
   const already =
     saleItems
       .filter(
-        item =>
-          String(item.product_id) ===
+        x =>
+          String(x.product_id) ===
           String(productId)
       )
       .reduce(
-        (sum, item) =>
-          sum + number(item.quantity),
+        (sum, x) =>
+          sum + number(x.quantity),
         0
       );
 
@@ -2243,12 +2062,12 @@ function addSaleItem() {
   });
 
 
-  document.getElementById("saleQty").value = "";
-
-  document.getElementById("salePrice").value = "";
+  qtyInput.value = "";
+  priceInput.value = "";
 
 
   renderSaleItems();
+
 
   showToast(
     "Ürün faturaya eklendi."
@@ -2257,14 +2076,12 @@ function addSaleItem() {
 }
 
 
-/* =========================================================
-   SATIŞ KALEMLERİ
-========================================================= */
-
 function renderSaleItems() {
 
   const container =
-    document.getElementById("saleItems");
+    document.getElementById(
+      "saleItems"
+    );
 
   if (!container) return;
 
@@ -2290,6 +2107,7 @@ function renderSaleItems() {
       <thead>
 
         <tr>
+
           <th>#</th>
           <th>Ürün</th>
           <th>Miktar</th>
@@ -2299,83 +2117,89 @@ function renderSaleItems() {
           <th>KDV Tutarı</th>
           <th>Toplam</th>
           <th></th>
+
         </tr>
 
       </thead>
 
       <tbody>
 
-        ${saleItems.map((item, index) => {
+        ${saleItems.map(
+          (item, index) => {
 
-          const subtotal =
-            number(item.quantity) *
-            number(item.unit_price);
+            const subtotal =
+              item.quantity *
+              item.unit_price;
+
+            const vatAmount =
+              subtotal *
+              item.vat_rate /
+              100;
+
+            const total =
+              subtotal +
+              vatAmount;
 
 
-          const vatAmount =
-            subtotal *
-            number(item.vat_rate) /
-            100;
+            return `
 
+              <tr>
 
-          const total =
-            subtotal + vatAmount;
+                <td>
+                  ${index + 1}
+                </td>
 
+                <td>
+                  ${escapeHtml(item.code)}
+                  -
+                  ${escapeHtml(
+                    item.product_name
+                  )}
+                </td>
 
-          return `
+                <td>
+                  ${item.quantity}
+                </td>
 
-            <tr>
+                <td>
+                  ${money(
+                    item.unit_price
+                  )}
+                </td>
 
-              <td>
-                ${index + 1}
-              </td>
+                <td>
+                  %${item.vat_rate}
+                </td>
 
-              <td>
-                ${escapeHtml(item.code)}
-                -
-                ${escapeHtml(item.product_name)}
-              </td>
+                <td>
+                  ${money(subtotal)}
+                </td>
 
-              <td>
-                ${number(item.quantity)}
-              </td>
+                <td>
+                  ${money(vatAmount)}
+                </td>
 
-              <td>
-                ${money(item.unit_price)}
-              </td>
+                <td>
+                  ${money(total)}
+                </td>
 
-              <td>
-                %${number(item.vat_rate)}
-              </td>
+                <td>
 
-              <td>
-                ${money(subtotal)}
-              </td>
+                  <button
+                    class="item-remove"
+                    onclick="removeSaleItem(${index})"
+                  >
+                    ✕
+                  </button>
 
-              <td>
-                ${money(vatAmount)}
-              </td>
+                </td>
 
-              <td>
-                ${money(total)}
-              </td>
+              </tr>
 
-              <td>
+            `;
 
-                <button
-                  class="item-remove"
-                  onclick="removeSaleItem(${index})"
-                >
-                  ✕
-                </button>
-
-              </td>
-
-            </tr>
-
-          `;
-
-        }).join("")}
+          }
+        ).join("")}
 
       </tbody>
 
@@ -2391,7 +2215,10 @@ function renderSaleItems() {
 
 function removeSaleItem(index) {
 
-  saleItems.splice(index, 1);
+  saleItems.splice(
+    index,
+    1
+  );
 
   renderSaleItems();
 
@@ -2401,23 +2228,20 @@ function removeSaleItem(index) {
 function calculateSaleTotals() {
 
   let subtotal = 0;
-
   let vatTotal = 0;
 
 
   saleItems.forEach(item => {
 
     const line =
-      number(item.quantity) *
-      number(item.unit_price);
-
+      item.quantity *
+      item.unit_price;
 
     subtotal += line;
 
-
     vatTotal +=
       line *
-      number(item.vat_rate) /
+      item.vat_rate /
       100;
 
   });
@@ -2428,29 +2252,289 @@ function calculateSaleTotals() {
     money(subtotal)
   );
 
-
   setText(
     "saleVatTotal",
     money(vatTotal)
   );
 
-
   setText(
     "saleGrandTotal",
-    money(subtotal + vatTotal)
+    money(
+      subtotal + vatTotal
+    )
   );
 
 
   return {
 
     subtotal,
-
     vatTotal,
 
     total:
       subtotal + vatTotal
 
   };
+
+}
+
+
+/* =========================================================
+   ALIŞ FATURASI KAYDET
+========================================================= */
+
+async function savePurchase() {
+
+  if (!purchaseItems.length) {
+
+    showToast(
+      "Faturaya en az bir ürün ekleyin."
+    );
+
+    return;
+
+  }
+
+
+  const partyId =
+    document
+      .getElementById(
+        "purchaseParty"
+      )
+      ?.value || null;
+
+
+  const invoiceNo =
+    document
+      .getElementById(
+        "purchaseInvoiceNo"
+      )
+      ?.value
+      .trim() || "";
+
+
+  const invoiceDate =
+    document
+      .getElementById(
+        "purchaseDate"
+      )
+      ?.value ||
+    today();
+
+
+  const note =
+    document
+      .getElementById(
+        "purchaseNote"
+      )
+      ?.value
+      .trim() || "";
+
+
+  const totals =
+    calculatePurchaseTotals();
+
+
+  try {
+
+    const purchaseResult =
+      await db
+        .from("purchases")
+        .insert({
+
+          invoice_no:
+            invoiceNo,
+
+          party_id:
+            partyId,
+
+          invoice_date:
+            invoiceDate,
+
+          subtotal:
+            totals.subtotal,
+
+          vat_rate:
+            0,
+
+          vat_amount:
+            totals.vatTotal,
+
+          total:
+            totals.total,
+
+          note
+
+        })
+        .select()
+        .single();
+
+
+    if (purchaseResult.error) {
+      throw purchaseResult.error;
+    }
+
+
+    const purchaseId =
+      purchaseResult.data.id;
+
+
+    const items =
+      purchaseItems.map(item => {
+
+        const subtotal =
+          item.quantity *
+          item.unit_price;
+
+        const vatAmount =
+          subtotal *
+          item.vat_rate /
+          100;
+
+
+        return {
+
+          purchase_id:
+            purchaseId,
+
+          product_id:
+            item.product_id,
+
+          quantity:
+            item.quantity,
+
+          unit_price:
+            item.unit_price,
+
+          vat_rate:
+            item.vat_rate,
+
+          line_subtotal:
+            subtotal,
+
+          vat_amount:
+            vatAmount,
+
+          line_total:
+            subtotal + vatAmount
+
+        };
+
+      });
+
+
+    const itemsResult =
+      await db
+        .from("purchase_items")
+        .insert(items);
+
+
+    if (itemsResult.error) {
+      throw itemsResult.error;
+    }
+
+
+    for (const item of purchaseItems) {
+
+      const product =
+        products.find(
+          p =>
+            String(p.id) ===
+            String(item.product_id)
+        );
+
+
+      if (!product) continue;
+
+
+      const newStock =
+        number(
+          product.stock_quantity
+        ) +
+        number(
+          item.quantity
+        );
+
+
+      const updateResult =
+        await db
+          .from("products")
+          .update({
+
+            stock_quantity:
+              newStock,
+
+            purchase_price:
+              item.unit_price
+
+          })
+          .eq(
+            "id",
+            item.product_id
+          );
+
+
+      if (updateResult.error) {
+        throw updateResult.error;
+      }
+
+
+      const movementResult =
+        await db
+          .from("stock_movements")
+          .insert({
+
+            product_id:
+              item.product_id,
+
+            party_id:
+              partyId,
+
+            type:
+              "in",
+
+            quantity:
+              item.quantity,
+
+            source_type:
+              "purchase",
+
+            source_id:
+              purchaseId,
+
+            note:
+              `Alış faturası ${invoiceNo}`
+
+          });
+
+
+      if (movementResult.error) {
+        throw movementResult.error;
+      }
+
+    }
+
+
+    showToast(
+      "Alış faturası başarıyla kaydedildi."
+    );
+
+
+    clearPurchase();
+
+    await loadAll();
+
+  }
+
+  catch (error) {
+
+    console.error(error);
+
+    showToast(
+      "Alış faturası kaydedilemedi: " +
+      error.message
+    );
+
+  }
 
 }
 
@@ -2473,33 +2557,47 @@ async function saveSale() {
 
 
   const partyId =
-    document.getElementById("saleParty").value || null;
+    document
+      .getElementById(
+        "saleParty"
+      )
+      ?.value || null;
 
 
   const invoiceNo =
     document
-      .getElementById("saleInvoiceNo")
-      .value
-      .trim();
+      .getElementById(
+        "saleInvoiceNo"
+      )
+      ?.value
+      .trim() || "";
 
 
   const invoiceDate =
-    document.getElementById("saleDate").value ||
+    document
+      .getElementById(
+        "saleDate"
+      )
+      ?.value ||
     today();
 
 
   const note =
     document
-      .getElementById("saleNote")
-      .value
-      .trim();
+      .getElementById(
+        "saleNote"
+      )
+      ?.value
+      .trim() || "";
 
 
   for (const item of saleItems) {
 
     const product =
       products.find(
-        p => p.id === item.product_id
+        p =>
+          String(p.id) ===
+          String(item.product_id)
       );
 
 
@@ -2541,19 +2639,26 @@ async function saveSale() {
         .from("sales")
         .insert({
 
-          invoice_no: invoiceNo,
+          invoice_no:
+            invoiceNo,
 
-          party_id: partyId,
+          party_id:
+            partyId,
 
-          invoice_date: invoiceDate,
+          invoice_date:
+            invoiceDate,
 
-          subtotal: totals.subtotal,
+          subtotal:
+            totals.subtotal,
 
-          vat_rate: 0,
+          vat_rate:
+            0,
 
-          vat_amount: totals.vatTotal,
+          vat_amount:
+            totals.vatTotal,
 
-          total: totals.total,
+          total:
+            totals.total,
 
           note
 
@@ -2575,13 +2680,12 @@ async function saveSale() {
       saleItems.map(item => {
 
         const subtotal =
-          number(item.quantity) *
-          number(item.unit_price);
-
+          item.quantity *
+          item.unit_price;
 
         const vatAmount =
           subtotal *
-          number(item.vat_rate) /
+          item.vat_rate /
           100;
 
 
@@ -2631,7 +2735,9 @@ async function saveSale() {
 
       const product =
         products.find(
-          p => p.id === item.product_id
+          p =>
+            String(p.id) ===
+            String(item.product_id)
         );
 
 
@@ -2639,8 +2745,12 @@ async function saveSale() {
 
 
       const newStock =
-        number(product.stock_quantity) -
-        number(item.quantity);
+        number(
+          product.stock_quantity
+        ) -
+        number(
+          item.quantity
+        );
 
 
       if (newStock < 0) {
@@ -2664,7 +2774,10 @@ async function saveSale() {
               item.unit_price
 
           })
-          .eq("id", item.product_id);
+          .eq(
+            "id",
+            item.product_id
+          );
 
 
       if (updateResult.error) {
@@ -2696,7 +2809,7 @@ async function saveSale() {
               saleId,
 
             note:
-              `Satış faturası ${invoiceNo || ""}`
+              `Satış faturası ${invoiceNo}`
 
           });
 
@@ -2743,16 +2856,24 @@ function clearPurchase() {
 
 
   const invoice =
-    document.getElementById("purchaseInvoiceNo");
+    document.getElementById(
+      "purchaseInvoiceNo"
+    );
 
   const date =
-    document.getElementById("purchaseDate");
+    document.getElementById(
+      "purchaseDate"
+    );
 
   const party =
-    document.getElementById("purchaseParty");
+    document.getElementById(
+      "purchaseParty"
+    );
 
   const note =
-    document.getElementById("purchaseNote");
+    document.getElementById(
+      "purchaseNote"
+    );
 
 
   if (invoice) {
@@ -2783,16 +2904,24 @@ function clearSale() {
 
 
   const invoice =
-    document.getElementById("saleInvoiceNo");
+    document.getElementById(
+      "saleInvoiceNo"
+    );
 
   const date =
-    document.getElementById("saleDate");
+    document.getElementById(
+      "saleDate"
+    );
 
   const party =
-    document.getElementById("saleParty");
+    document.getElementById(
+      "saleParty"
+    );
 
   const note =
-    document.getElementById("saleNote");
+    document.getElementById(
+      "saleNote"
+    );
 
 
   if (invoice) {
@@ -2824,7 +2953,9 @@ function clearSale() {
 function renderMovements() {
 
   const container =
-    document.getElementById("movementsTable");
+    document.getElementById(
+      "movementsTable"
+    );
 
   if (!container) return;
 
@@ -2848,24 +2979,26 @@ function renderMovements() {
       <thead>
 
         <tr>
+
           <th>Tarih</th>
           <th>Ürün</th>
           <th>Hareket</th>
           <th>Miktar</th>
           <th>Açıklama</th>
+
         </tr>
 
       </thead>
 
       <tbody>
 
-        ${movements.map(movement => {
+        ${movements.map(m => {
 
           const product =
             products.find(
-              product =>
-                product.id ===
-                movement.product_id
+              p =>
+                String(p.id) ===
+                String(m.product_id)
             );
 
 
@@ -2875,10 +3008,12 @@ function renderMovements() {
 
               <td>
                 ${
-                  movement.created_at
+                  m.created_at
                     ? new Date(
-                        movement.created_at
-                      ).toLocaleString("tr-TR")
+                        m.created_at
+                      ).toLocaleString(
+                        "tr-TR"
+                      )
                     : "-"
                 }
               </td>
@@ -2892,13 +3027,13 @@ function renderMovements() {
               <td>
 
                 <span class="badge ${
-                  movement.type === "in"
+                  m.type === "in"
                     ? "badge-in"
                     : "badge-out"
                 }">
 
                   ${
-                    movement.type === "in"
+                    m.type === "in"
                       ? "Giriş"
                       : "Çıkış"
                   }
@@ -2908,12 +3043,12 @@ function renderMovements() {
               </td>
 
               <td>
-                ${number(movement.quantity)}
+                ${number(m.quantity)}
               </td>
 
               <td>
                 ${escapeHtml(
-                  movement.note || "-"
+                  m.note || "-"
                 )}
               </td>
 
@@ -2950,14 +3085,12 @@ function openMovementForm() {
             Ürün seçin...
           </option>
 
-          ${products.map(product => `
+          ${products.map(p => `
 
-            <option value="${product.id}">
-
-              ${escapeHtml(product.code)}
+            <option value="${p.id}">
+              ${escapeHtml(p.code)}
               -
-              ${escapeHtml(product.name)}
-
+              ${escapeHtml(p.name)}
             </option>
 
           `).join("")}
@@ -3008,7 +3141,9 @@ function openMovementForm() {
 
         <label>Açıklama</label>
 
-        <textarea id="movementNote"></textarea>
+        <textarea
+          id="movementNote"
+        ></textarea>
 
       </div>
 
@@ -3016,16 +3151,16 @@ function openMovementForm() {
       <div class="form-buttons">
 
         <button
-          type="button"
           class="secondary"
+          type="button"
           onclick="closeModal()"
         >
           Vazgeç
         </button>
 
         <button
-          type="button"
           class="success"
+          type="button"
           onclick="saveMovement()"
         >
           Kaydet
@@ -3043,29 +3178,38 @@ function openMovementForm() {
 async function saveMovement() {
 
   const productId =
-    document.getElementById(
-      "movementProduct"
-    ).value;
+    document
+      .getElementById(
+        "movementProduct"
+      )
+      ?.value;
 
 
   const type =
-    document.getElementById(
-      "movementType"
-    ).value;
+    document
+      .getElementById(
+        "movementType"
+      )
+      ?.value;
 
 
   const qty =
     number(
-      document.getElementById(
-        "movementQty"
-      ).value
+      document
+        .getElementById(
+          "movementQty"
+        )
+        ?.value
     );
 
 
   const note =
-    document.getElementById(
-      "movementNote"
-    ).value.trim();
+    document
+      .getElementById(
+        "movementNote"
+      )
+      ?.value
+      .trim() || "";
 
 
   if (!productId || qty <= 0) {
@@ -3104,16 +3248,18 @@ async function saveMovement() {
   if (type === "in") {
 
     newStock =
-      number(product.stock_quantity) +
-      qty;
+      number(
+        product.stock_quantity
+      ) + qty;
 
   }
 
   else {
 
     newStock =
-      number(product.stock_quantity) -
-      qty;
+      number(
+        product.stock_quantity
+      ) - qty;
 
 
     if (newStock < 0) {
@@ -3135,9 +3281,13 @@ async function saveMovement() {
       await db
         .from("products")
         .update({
-          stock_quantity: newStock
+          stock_quantity:
+            newStock
         })
-        .eq("id", productId);
+        .eq(
+          "id",
+          productId
+        );
 
 
     if (updateResult.error) {
@@ -3210,13 +3360,13 @@ function renderDocuments() {
 
 
   const purchaseRows =
-    purchases.map(purchase => {
+    purchases.map(p => {
 
       const party =
         parties.find(
-          party =>
-            party.id ===
-            purchase.party_id
+          x =>
+            String(x.id) ===
+            String(p.party_id)
         );
 
 
@@ -3226,12 +3376,12 @@ function renderDocuments() {
 
           <td>
             ${escapeHtml(
-              purchase.invoice_no || "-"
+              p.invoice_no || "-"
             )}
           </td>
 
           <td>
-            ${purchase.invoice_date || "-"}
+            ${p.invoice_date || "-"}
           </td>
 
           <td>
@@ -3245,16 +3395,16 @@ function renderDocuments() {
           </td>
 
           <td>
-            ${money(purchase.subtotal)}
+            ${money(p.subtotal)}
           </td>
 
           <td>
-            ${money(purchase.vat_amount)}
+            ${money(p.vat_amount)}
           </td>
 
           <td>
             <strong>
-              ${money(purchase.total)}
+              ${money(p.total)}
             </strong>
           </td>
 
@@ -3266,13 +3416,13 @@ function renderDocuments() {
 
 
   const saleRows =
-    sales.map(sale => {
+    sales.map(s => {
 
       const party =
         parties.find(
-          party =>
-            party.id ===
-            sale.party_id
+          x =>
+            String(x.id) ===
+            String(s.party_id)
         );
 
 
@@ -3282,12 +3432,12 @@ function renderDocuments() {
 
           <td>
             ${escapeHtml(
-              sale.invoice_no || "-"
+              s.invoice_no || "-"
             )}
           </td>
 
           <td>
-            ${sale.invoice_date || "-"}
+            ${s.invoice_date || "-"}
           </td>
 
           <td>
@@ -3301,16 +3451,16 @@ function renderDocuments() {
           </td>
 
           <td>
-            ${money(sale.subtotal)}
+            ${money(s.subtotal)}
           </td>
 
           <td>
-            ${money(sale.vat_amount)}
+            ${money(s.vat_amount)}
           </td>
 
           <td>
             <strong>
-              ${money(sale.total)}
+              ${money(s.total)}
             </strong>
           </td>
 
@@ -3375,16 +3525,16 @@ function renderReports() {
 
   const purchaseTotal =
     purchases.reduce(
-      (sum, purchase) =>
-        sum + number(purchase.total),
+      (sum, x) =>
+        sum + number(x.total),
       0
     );
 
 
   const saleTotal =
     sales.reduce(
-      (sum, sale) =>
-        sum + number(sale.total),
+      (sum, x) =>
+        sum + number(x.total),
       0
     );
 
@@ -3394,18 +3544,15 @@ function renderReports() {
     purchases.length
   );
 
-
   setText(
     "saleCount",
     sales.length
   );
 
-
   setText(
     "reportPurchaseTotal",
     money(purchaseTotal)
   );
-
 
   setText(
     "reportSaleTotal",
@@ -3418,7 +3565,6 @@ function renderReports() {
       "reportSummary"
     );
 
-
   if (!container) return;
 
 
@@ -3428,16 +3574,16 @@ function renderReports() {
 
   const totalVatPurchase =
     purchases.reduce(
-      (sum, purchase) =>
-        sum + number(purchase.vat_amount),
+      (sum, x) =>
+        sum + number(x.vat_amount),
       0
     );
 
 
   const totalVatSale =
     sales.reduce(
-      (sum, sale) =>
-        sum + number(sale.vat_amount),
+      (sum, x) =>
+        sum + number(x.vat_amount),
       0
     );
 
@@ -3549,24 +3695,25 @@ function renderReports() {
    CSV
 ========================================================= */
 
-function downloadCSV(filename, rows) {
+function downloadCSV(
+  filename,
+  rows
+) {
 
   const csv =
     rows
       .map(row =>
-        row
-          .map(value => {
+        row.map(value => {
 
-            const text =
-              String(value ?? "");
+          const text =
+            String(value ?? "");
 
-            return `"${text.replaceAll(
-              '"',
-              '""'
-            )}"`;
+          return `"${text.replaceAll(
+            '"',
+            '""'
+          )}"`;
 
-          })
-          .join(";")
+        }).join(";")
       )
       .join("\n");
 
@@ -3582,24 +3729,31 @@ function downloadCSV(filename, rows) {
 
 
   const url =
-    URL.createObjectURL(blob);
+    URL.createObjectURL(
+      blob
+    );
 
 
   const link =
-    document.createElement("a");
+    document.createElement(
+      "a"
+    );
 
 
   link.href = url;
-
   link.download = filename;
 
-  document.body.appendChild(link);
+  document.body.appendChild(
+    link
+  );
 
   link.click();
 
   link.remove();
 
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(
+    url
+  );
 
 }
 
@@ -3620,29 +3774,29 @@ function exportPurchasesCSV() {
   ];
 
 
-  purchases.forEach(purchase => {
+  purchases.forEach(p => {
 
     const party =
       parties.find(
-        party =>
-          party.id ===
-          purchase.party_id
+        x =>
+          String(x.id) ===
+          String(p.party_id)
       );
 
 
     rows.push([
 
-      purchase.invoice_no || "",
+      p.invoice_no || "",
 
-      purchase.invoice_date || "",
+      p.invoice_date || "",
 
       party?.name || "",
 
-      purchase.subtotal || 0,
+      p.subtotal || 0,
 
-      purchase.vat_amount || 0,
+      p.vat_amount || 0,
 
-      purchase.total || 0
+      p.total || 0
 
     ]);
 
@@ -3673,29 +3827,29 @@ function exportSalesCSV() {
   ];
 
 
-  sales.forEach(sale => {
+  sales.forEach(s => {
 
     const party =
       parties.find(
-        party =>
-          party.id ===
-          sale.party_id
+        x =>
+          String(x.id) ===
+          String(s.party_id)
       );
 
 
     rows.push([
 
-      sale.invoice_no || "",
+      s.invoice_no || "",
 
-      sale.invoice_date || "",
+      s.invoice_date || "",
 
       party?.name || "",
 
-      sale.subtotal || 0,
+      s.subtotal || 0,
 
-      sale.vat_amount || 0,
+      s.vat_amount || 0,
 
-      sale.total || 0
+      s.total || 0
 
     ]);
 
@@ -3708,4 +3862,46 @@ function exportSalesCSV() {
   );
 
 }
-```
+
+
+/* =========================================================
+   MODAL KAPATMA
+========================================================= */
+
+document.addEventListener(
+  "click",
+  event => {
+
+    const modal =
+      document.getElementById(
+        "modal"
+      );
+
+
+    if (
+      modal &&
+      event.target === modal
+    ) {
+
+      closeModal();
+
+    }
+
+  }
+);
+
+
+document.addEventListener(
+  "keydown",
+  event => {
+
+    if (
+      event.key === "Escape"
+    ) {
+
+      closeModal();
+
+    }
+
+  }
+);

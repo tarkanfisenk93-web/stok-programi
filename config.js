@@ -1,6 +1,6 @@
 // Supabase bağlantısı
 
-const SUPABASE_URL = "https://urxbtzborgopjeqwqfu.supabase.co";
+const SUPABASE_URL = "https://urxbtzborgopjeqwqqfu.supabase.co";
 
 const SUPABASE_KEY = "sb_publishable_eWD_FzCyLR6UitfER7EXbg_TAP9nVXD";
 

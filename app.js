@@ -6329,13 +6329,6 @@ async function deleteInvoice(
   const isPurchase =
     type === 'purchase';
 
-  const warning =
-    'Bu faturayı silmek istediğinize emin misiniz?\n\n' +
-    'Fatura silindiğinde ilgili stok giriş/çıkışları geri alınacaktır. ' +
-    'Hatalı silme işlemi stok kayıtlarını etkileyebilir.';
-
-  if (!confirm(warning)) return;
-
   try {
 
     const itemTable =
@@ -6366,7 +6359,47 @@ async function deleteInvoice(
       type
     );
 
-    validateStockChanges(changes);
+    const negativeStocks = [];
+
+    for (const [productId, change] of changes) {
+
+      const product = products.find(
+        x => String(x.id) === String(productId)
+      );
+
+      if (!product) continue;
+
+      const newStock =
+        num(product.stock_quantity) +
+        change;
+
+      if (newStock < 0) {
+        negativeStocks.push(
+          `${product.name}: ${newStock}`
+        );
+      }
+
+    }
+
+    let warning =
+      'Bu faturayı silmek istediğinize emin misiniz?\n\n' +
+      (
+        isPurchase
+          ? 'Satın alma faturası silindiğinde faturadaki ürünler stoktan düşülecektir.'
+          : 'Satış faturası silindiğinde faturadaki ürünler stoğa geri eklenecektir.'
+      );
+
+    if (negativeStocks.length) {
+      warning +=
+        '\n\nDİKKAT: İşlem sonrasında şu stoklar eksiye düşecek:\n' +
+        negativeStocks.join('\n') +
+        '\n\nYine de silmek istiyor musunuz?';
+    } else {
+      warning +=
+        '\n\nHatalı silme işlemi stok kayıtlarını etkileyebilir.';
+    }
+
+    if (!confirm(warning)) return;
 
     await applyStockChanges(changes);
 

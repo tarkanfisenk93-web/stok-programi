@@ -14,60 +14,6 @@ let editingSaleId = null;
 
 
 /* =========================================================
-   GENEL
-========================================================= */
-
-function $(id) {
-  return document.getElementById(id);
-}
-
-function number(value) {
-  return Number(value || 0);
-}
-
-function money(value) {
-  return Number(value || 0).toLocaleString("tr-TR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }) + " ₺";
-}
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function setText(id, value) {
-  const el = $(id);
-  if (el) el.textContent = value;
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function showToast(message) {
-  const toast = $("toast");
-
-  if (!toast) {
-    alert(message);
-    return;
-  }
-
-  toast.textContent = message;
-  toast.classList.add("show");
-
-  setTimeout(() => {
-    toast.classList.remove("show");
-  }, 3000);
-}
-
-
-/* =========================================================
    BAŞLANGIÇ
 ========================================================= */
 
@@ -76,22 +22,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNavigation();
   setDefaultDates();
 
-  const refreshBtn = $("refreshBtn");
+  document
+    .getElementById("refreshBtn")
+    ?.addEventListener("click", loadAll);
 
-  if (refreshBtn) {
-    refreshBtn.addEventListener("click", loadAll);
-  }
-
-  const productSearch = $("productSearch");
-
-  if (productSearch) {
-    productSearch.addEventListener(
-      "input",
-      renderProducts
-    );
-  }
-
-  hideDocumentsMenu();
+  document
+    .getElementById("productSearch")
+    ?.addEventListener("input", renderProducts);
 
   await loadAll();
 
@@ -99,122 +36,195 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
 /* =========================================================
-   MENÜ
+   YARDIMCILAR
 ========================================================= */
 
-function hideDocumentsMenu() {
+function number(value) {
+  return Number(value || 0);
+}
 
-  document
-    .querySelectorAll(".menu")
-    .forEach(button => {
 
-      if (
-        button.dataset.page === "documents"
-      ) {
-        button.style.display = "none";
-      }
+function money(value, currency = "TRY") {
 
-    });
+  const amount = Number(value || 0);
 
-  const documentsPage = $("documents");
+  if (currency === "USD") {
+    return amount.toLocaleString("tr-TR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }) + " $";
+  }
 
-  if (documentsPage) {
-    documentsPage.classList.add("hidden");
+  return amount.toLocaleString("tr-TR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }) + " ₺";
+}
+
+
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+
+function setText(id, value) {
+
+  const element = document.getElementById(id);
+
+  if (element) {
+    element.textContent = value;
   }
 
 }
 
 
+function escapeHtml(value) {
+
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+}
+
+
+function showToast(message) {
+
+  const toast = document.getElementById("toast");
+
+  if (!toast) return;
+
+  toast.textContent = message;
+  toast.classList.add("show");
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 3000);
+
+}
+
+
+function getCurrency(id, fallback = "TRY") {
+
+  const element = document.getElementById(id);
+
+  if (!element) {
+    return fallback;
+  }
+
+  return element.value || fallback;
+
+}
+
+
+function getExchangeRate(id) {
+
+  const element = document.getElementById(id);
+
+  if (!element) {
+    return 1;
+  }
+
+  const value = number(element.value);
+
+  return value > 0 ? value : 1;
+
+}
+
+
+function currencyLabel(currency) {
+  return currency === "USD" ? "USD" : "TL";
+}
+
+
+function invoiceMoney(value, currency) {
+  return money(value, currency);
+}
+
+
+/* =========================================================
+   MENÜ
+========================================================= */
+
 function setupNavigation() {
 
-  document
-    .querySelectorAll(".menu")
-    .forEach(button => {
+  document.querySelectorAll(".menu").forEach(button => {
 
-      button.addEventListener("click", () => {
+    button.addEventListener("click", () => {
 
-        const page =
-          button.dataset.page;
+      const page = button.dataset.page;
 
-        document
-          .querySelectorAll(".menu")
-          .forEach(x =>
-            x.classList.remove("active")
-          );
+      document
+        .querySelectorAll(".menu")
+        .forEach(x => x.classList.remove("active"));
 
-        button.classList.add("active");
+      button.classList.add("active");
 
-        document
-          .querySelectorAll(".page")
-          .forEach(x =>
-            x.classList.add("hidden")
-          );
+      document
+        .querySelectorAll(".page")
+        .forEach(x => x.classList.add("hidden"));
 
-        const target = $(page);
+      const target = document.getElementById(page);
 
-        if (target) {
-          target.classList.remove("hidden");
-        }
+      if (target) {
+        target.classList.remove("hidden");
+      }
 
-        const titles = {
+      const titles = {
 
-          dashboard: "Ana Sayfa",
+        dashboard: "Ana Sayfa",
+        products: "Ürünler",
+        purchase: "Satın Alma",
+        sales: "Satış",
+        movements: "Stok Hareketleri",
+        parties: "Cari / Müşteriler",
+        reports: "Raporlar"
 
-          products: "Ürünler",
+      };
 
-          purchase: "Satın Alma",
-
-          sales: "Satış",
-
-          movements: "Stok Hareketleri",
-
-          parties: "Cari / Müşteriler",
-
-          reports: "Raporlar"
-
-        };
-
-        setText(
-          "pageTitle",
-          titles[page] || "Stok Takip"
-        );
+      setText(
+        "pageTitle",
+        titles[page] || "Stok Takip"
+      );
 
 
-        if (page === "dashboard") {
-          renderDashboard();
-        }
+      if (page === "dashboard") {
+        renderDashboard();
+      }
 
-        if (page === "products") {
-          renderProducts();
-        }
+      if (page === "products") {
+        renderProducts();
+      }
 
-        if (page === "purchase") {
-          preparePurchasePage();
-          renderPurchaseItems();
-          renderSavedPurchases();
-        }
+      if (page === "purchase") {
+        preparePurchasePage();
+        renderPurchaseItems();
+        renderPurchaseHistory();
+      }
 
-        if (page === "sales") {
-          prepareSalePage();
-          renderSaleItems();
-          renderSavedSales();
-        }
+      if (page === "sales") {
+        prepareSalePage();
+        renderSaleItems();
+        renderSaleHistory();
+      }
 
-        if (page === "movements") {
-          renderMovements();
-        }
+      if (page === "movements") {
+        renderMovements();
+      }
 
-        if (page === "parties") {
-          renderParties();
-        }
+      if (page === "parties") {
+        renderParties();
+      }
 
-        if (page === "reports") {
-          renderReports();
-        }
-
-      });
+      if (page === "reports") {
+        renderReports();
+      }
 
     });
+
+  });
 
 }
 
@@ -225,19 +235,25 @@ function setupNavigation() {
 
 function setDefaultDates() {
 
-  if ($("purchaseDate")) {
-    $("purchaseDate").value = today();
+  const purchaseDate =
+    document.getElementById("purchaseDate");
+
+  const saleDate =
+    document.getElementById("saleDate");
+
+  if (purchaseDate) {
+    purchaseDate.value = today();
   }
 
-  if ($("saleDate")) {
-    $("saleDate").value = today();
+  if (saleDate) {
+    saleDate.value = today();
   }
 
 }
 
 
 /* =========================================================
-   VERİLERİ YÜKLE
+   VERİLER
 ========================================================= */
 
 async function loadAll() {
@@ -249,56 +265,45 @@ async function loadAll() {
     );
 
     return;
-
   }
 
 
   try {
 
-    const results =
-      await Promise.all([
+    const results = await Promise.all([
 
-        db
-          .from("products")
-          .select("*")
-          .order("name"),
+      db
+        .from("products")
+        .select("*")
+        .order("name"),
 
-        db
-          .from("parties")
-          .select("*")
-          .order("name"),
+      db
+        .from("parties")
+        .select("*")
+        .order("name"),
 
-        db
-          .from("purchases")
-          .select("*")
-          .order(
-            "invoice_date",
-            {
-              ascending: false
-            }
-          ),
+      db
+        .from("purchases")
+        .select("*")
+        .order("invoice_date", {
+          ascending: false
+        }),
 
-        db
-          .from("sales")
-          .select("*")
-          .order(
-            "invoice_date",
-            {
-              ascending: false
-            }
-          ),
+      db
+        .from("sales")
+        .select("*")
+        .order("invoice_date", {
+          ascending: false
+        }),
 
-        db
-          .from("stock_movements")
-          .select("*")
-          .order(
-            "created_at",
-            {
-              ascending: false
-            }
-          )
+      db
+        .from("stock_movements")
+        .select("*")
+        .order("created_at", {
+          ascending: false
+        })
 
-      ]);
+    ]);
 
 
     for (const result of results) {
@@ -311,39 +316,32 @@ async function loadAll() {
 
 
     products = results[0].data || [];
-
     parties = results[1].data || [];
-
     purchases = results[2].data || [];
-
     sales = results[3].data || [];
-
     movements = results[4].data || [];
 
 
     renderDashboard();
-
     renderProducts();
-
     renderParties();
-
     renderMovements();
-
     renderReports();
 
     preparePurchasePage();
-
     prepareSalePage();
 
-    renderSavedPurchases();
-
-    renderSavedSales();
+    renderPurchaseHistory();
+    renderSaleHistory();
 
   }
 
   catch (error) {
 
-    console.error(error);
+    console.error(
+      "loadAll:",
+      error
+    );
 
     showToast(
       "Veriler yüklenemedi: " +
@@ -408,25 +406,10 @@ function renderDashboard() {
       );
 
 
-  setText(
-    "totalProducts",
-    totalProducts
-  );
-
-  setText(
-    "totalStock",
-    totalStock
-  );
-
-  setText(
-    "criticalProducts",
-    critical
-  );
-
-  setText(
-    "totalParties",
-    parties.length
-  );
+  setText("totalProducts", totalProducts);
+  setText("totalStock", totalStock);
+  setText("criticalProducts", critical);
+  setText("totalParties", parties.length);
 
   setText(
     "totalSales",
@@ -440,9 +423,7 @@ function renderDashboard() {
 
   setText(
     "grossProfit",
-    money(
-      totalSales - totalPurchases
-    )
+    money(totalSales - totalPurchases)
   );
 
   setText(
@@ -452,7 +433,9 @@ function renderDashboard() {
 
 
   const container =
-    $("criticalProductsTable");
+    document.getElementById(
+      "criticalProductsTable"
+    );
 
   if (!container) return;
 
@@ -497,13 +480,9 @@ function renderDashboard() {
 
           <tr>
 
-            <td>
-              ${escapeHtml(p.code)}
-            </td>
+            <td>${escapeHtml(p.code)}</td>
 
-            <td>
-              ${escapeHtml(p.name)}
-            </td>
+            <td>${escapeHtml(p.name)}</td>
 
             <td class="text-danger">
               ${number(p.stock_quantity)}
@@ -533,14 +512,18 @@ function renderDashboard() {
 function renderProducts() {
 
   const container =
-    $("productsTable");
+    document.getElementById(
+      "productsTable"
+    );
 
   if (!container) return;
 
 
   const search =
     (
-      $("productSearch")?.value || ""
+      document
+        .getElementById("productSearch")
+        ?.value || ""
     ).toLowerCase();
 
 
@@ -605,29 +588,17 @@ function renderProducts() {
 
             <tr>
 
-              <td>
-                ${escapeHtml(p.code)}
-              </td>
+              <td>${escapeHtml(p.code)}</td>
 
-              <td>
-                ${escapeHtml(p.name)}
-              </td>
+              <td>${escapeHtml(p.name)}</td>
 
-              <td>
-                ${number(p.stock_quantity)}
-              </td>
+              <td>${number(p.stock_quantity)}</td>
 
-              <td>
-                ${number(p.critical_stock)}
-              </td>
+              <td>${number(p.critical_stock)}</td>
 
-              <td>
-                ${money(p.purchase_price)}
-              </td>
+              <td>${money(p.purchase_price)}</td>
 
-              <td>
-                ${money(p.sale_price)}
-              </td>
+              <td>${money(p.sale_price)}</td>
 
               <td>
 
@@ -680,13 +651,15 @@ function renderProducts() {
 }
 
 
+/* =========================================================
+   ÜRÜN FORMU
+========================================================= */
+
 function openProductForm(id = null) {
 
   const product =
     products.find(
-      x =>
-        String(x.id) ===
-        String(id)
+      x => String(x.id) === String(id)
     );
 
 
@@ -706,9 +679,7 @@ function openProductForm(id = null) {
 
           <input
             id="formProductCode"
-            value="${escapeHtml(
-              product?.code || ""
-            )}"
+            value="${escapeHtml(product?.code || "")}"
           >
 
         </div>
@@ -720,9 +691,7 @@ function openProductForm(id = null) {
 
           <input
             id="formProductName"
-            value="${escapeHtml(
-              product?.name || ""
-            )}"
+            value="${escapeHtml(product?.name || "")}"
           >
 
         </div>
@@ -736,9 +705,7 @@ function openProductForm(id = null) {
             id="formProductStock"
             type="number"
             step="0.01"
-            value="${number(
-              product?.stock_quantity
-            )}"
+            value="${number(product?.stock_quantity)}"
           >
 
         </div>
@@ -752,9 +719,7 @@ function openProductForm(id = null) {
             id="formProductCritical"
             type="number"
             step="0.01"
-            value="${number(
-              product?.critical_stock || 5
-            )}"
+            value="${number(product?.critical_stock || 5)}"
           >
 
         </div>
@@ -768,9 +733,7 @@ function openProductForm(id = null) {
             id="formProductPurchase"
             type="number"
             step="0.01"
-            value="${number(
-              product?.purchase_price
-            )}"
+            value="${number(product?.purchase_price)}"
           >
 
         </div>
@@ -784,9 +747,7 @@ function openProductForm(id = null) {
             id="formProductSale"
             type="number"
             step="0.01"
-            value="${number(
-              product?.sale_price
-            )}"
+            value="${number(product?.sale_price)}"
           >
 
         </div>
@@ -828,42 +789,48 @@ function editProduct(id) {
 
 async function saveProduct(id) {
 
-  const data = {
+  const code =
+    document
+      .getElementById("formProductCode")
+      .value
+      .trim();
 
-    code:
-      $("formProductCode")
+  const name =
+    document
+      .getElementById("formProductName")
+      .value
+      .trim();
+
+  const stock =
+    number(
+      document
+        .getElementById("formProductStock")
         .value
-        .trim(),
+    );
 
-    name:
-      $("formProductName")
+  const critical =
+    number(
+      document
+        .getElementById("formProductCritical")
         .value
-        .trim(),
+    );
 
-    stock_quantity:
-      number(
-        $("formProductStock").value
-      ),
+  const purchase =
+    number(
+      document
+        .getElementById("formProductPurchase")
+        .value
+    );
 
-    critical_stock:
-      number(
-        $("formProductCritical").value
-      ),
-
-    purchase_price:
-      number(
-        $("formProductPurchase").value
-      ),
-
-    sale_price:
-      number(
-        $("formProductSale").value
-      )
-
-  };
+  const sale =
+    number(
+      document
+        .getElementById("formProductSale")
+        .value
+    );
 
 
-  if (!data.code || !data.name) {
+  if (!code || !name) {
 
     showToast(
       "Ürün kodu ve adı zorunludur."
@@ -874,10 +841,21 @@ async function saveProduct(id) {
   }
 
 
+  const data = {
+
+    code,
+    name,
+    stock_quantity: stock,
+    critical_stock: critical,
+    purchase_price: purchase,
+    sale_price: sale
+
+  };
+
+
   try {
 
     let result;
-
 
     if (id) {
 
@@ -951,9 +929,7 @@ async function deleteProduct(id) {
     }
 
 
-    showToast(
-      "Ürün silindi."
-    );
+    showToast("Ürün silindi.");
 
     await loadAll();
 
@@ -964,7 +940,8 @@ async function deleteProduct(id) {
     console.error(error);
 
     showToast(
-      "Ürün silinemedi."
+      "Ürün silinemedi: " +
+      error.message
     );
 
   }
@@ -973,28 +950,15 @@ async function deleteProduct(id) {
 
 
 /* =========================================================
-   CARİ
+   CARİLER
 ========================================================= */
-
-function partyType(type) {
-
-  if (type === "supplier") {
-    return "Tedarikçi";
-  }
-
-  if (type === "both") {
-    return "Müşteri + Tedarikçi";
-  }
-
-  return "Müşteri";
-
-}
-
 
 function renderParties() {
 
   const container =
-    $("partiesTable");
+    document.getElementById(
+      "partiesTable"
+    );
 
   if (!container) return;
 
@@ -1018,14 +982,12 @@ function renderParties() {
       <thead>
 
         <tr>
-
           <th>Unvan</th>
           <th>Tür</th>
           <th>Telefon</th>
           <th>E-posta</th>
           <th>Vergi No</th>
           <th>İşlem</th>
-
         </tr>
 
       </thead>
@@ -1036,30 +998,20 @@ function renderParties() {
 
           <tr>
 
+            <td>${escapeHtml(p.name)}</td>
+
+            <td>${partyType(p.type)}</td>
+
             <td>
-              ${escapeHtml(p.name)}
+              ${escapeHtml(p.phone || "-")}
             </td>
 
             <td>
-              ${partyType(p.type)}
+              ${escapeHtml(p.email || "-")}
             </td>
 
             <td>
-              ${escapeHtml(
-                p.phone || "-"
-              )}
-            </td>
-
-            <td>
-              ${escapeHtml(
-                p.email || "-"
-              )}
-            </td>
-
-            <td>
-              ${escapeHtml(
-                p.tax_number || "-"
-              )}
+              ${escapeHtml(p.tax_number || "-")}
             </td>
 
             <td>
@@ -1093,13 +1045,26 @@ function renderParties() {
 }
 
 
+function partyType(type) {
+
+  if (type === "supplier") {
+    return "Tedarikçi";
+  }
+
+  if (type === "both") {
+    return "Müşteri + Tedarikçi";
+  }
+
+  return "Müşteri";
+
+}
+
+
 function openPartyForm(id = null) {
 
   const party =
     parties.find(
-      x =>
-        String(x.id) ===
-        String(id)
+      x => String(x.id) === String(id)
     );
 
 
@@ -1117,9 +1082,7 @@ function openPartyForm(id = null) {
 
         <input
           id="formPartyName"
-          value="${escapeHtml(
-            party?.name || ""
-          )}"
+          value="${escapeHtml(party?.name || "")}"
         >
 
       </div>
@@ -1134,29 +1097,17 @@ function openPartyForm(id = null) {
           <select id="formPartyType">
 
             <option value="customer"
-              ${
-                party?.type === "customer"
-                  ? "selected"
-                  : ""
-              }>
+              ${party?.type === "customer" ? "selected" : ""}>
               Müşteri
             </option>
 
             <option value="supplier"
-              ${
-                party?.type === "supplier"
-                  ? "selected"
-                  : ""
-              }>
+              ${party?.type === "supplier" ? "selected" : ""}>
               Tedarikçi
             </option>
 
             <option value="both"
-              ${
-                party?.type === "both"
-                  ? "selected"
-                  : ""
-              }>
+              ${party?.type === "both" ? "selected" : ""}>
               Müşteri + Tedarikçi
             </option>
 
@@ -1171,9 +1122,7 @@ function openPartyForm(id = null) {
 
           <input
             id="formPartyPhone"
-            value="${escapeHtml(
-              party?.phone || ""
-            )}"
+            value="${escapeHtml(party?.phone || "")}"
           >
 
         </div>
@@ -1185,9 +1134,7 @@ function openPartyForm(id = null) {
 
           <input
             id="formPartyEmail"
-            value="${escapeHtml(
-              party?.email || ""
-            )}"
+            value="${escapeHtml(party?.email || "")}"
           >
 
         </div>
@@ -1199,9 +1146,7 @@ function openPartyForm(id = null) {
 
           <input
             id="formPartyTax"
-            value="${escapeHtml(
-              party?.tax_number || ""
-            )}"
+            value="${escapeHtml(party?.tax_number || "")}"
           >
 
         </div>
@@ -1223,16 +1168,16 @@ function openPartyForm(id = null) {
       <div class="form-buttons">
 
         <button
-          class="secondary"
           type="button"
+          class="secondary"
           onclick="closeModal()"
         >
           Vazgeç
         </button>
 
         <button
-          class="success"
           type="button"
+          class="success"
           onclick="saveParty('${id || ""}')"
         >
           Kaydet
@@ -1257,31 +1202,37 @@ async function saveParty(id) {
   const data = {
 
     name:
-      $("formPartyName")
+      document
+        .getElementById("formPartyName")
         .value
         .trim(),
 
     type:
-      $("formPartyType")
+      document
+        .getElementById("formPartyType")
         .value,
 
     phone:
-      $("formPartyPhone")
+      document
+        .getElementById("formPartyPhone")
         .value
         .trim(),
 
     email:
-      $("formPartyEmail")
+      document
+        .getElementById("formPartyEmail")
         .value
         .trim(),
 
     tax_number:
-      $("formPartyTax")
+      document
+        .getElementById("formPartyTax")
         .value
         .trim(),
 
     address:
-      $("formPartyAddress")
+      document
+        .getElementById("formPartyAddress")
         .value
         .trim()
 
@@ -1302,7 +1253,6 @@ async function saveParty(id) {
   try {
 
     let result;
-
 
     if (id) {
 
@@ -1386,6 +1336,8 @@ async function deleteParty(id) {
 
   catch (error) {
 
+    console.error(error);
+
     showToast(
       "Bu cari kullanıldığı için silinemiyor."
     );
@@ -1402,31 +1354,24 @@ async function deleteParty(id) {
 function openModal(title, content) {
 
   const titleElement =
-    $("modalTitle");
+    document.getElementById("modalTitle");
 
   const form =
-    $("modalForm");
+    document.getElementById("modalForm");
 
   const modal =
-    $("modal");
+    document.getElementById("modal");
 
 
-  if (
-    !titleElement ||
-    !form ||
-    !modal
-  ) return;
+  if (!titleElement || !form || !modal) {
+    return;
+  }
 
 
-  titleElement.textContent =
-    title;
+  titleElement.textContent = title;
+  form.innerHTML = content;
 
-  form.innerHTML =
-    content;
-
-  modal.classList.remove(
-    "hidden"
-  );
+  modal.classList.remove("hidden");
 
 }
 
@@ -1434,24 +1379,136 @@ function openModal(title, content) {
 function closeModal() {
 
   const modal =
-    $("modal");
+    document.getElementById("modal");
 
   if (modal) {
-    modal.classList.add(
-      "hidden"
-    );
+    modal.classList.add("hidden");
   }
 
 }
 
 
 /* =========================================================
-   ÜRÜN / CARİ SEÇİMLERİ
+   PARA BİRİMİ
 ========================================================= */
+
+function togglePurchaseCurrency() {
+
+  const currency =
+    getCurrency(
+      "purchaseCurrency",
+      "TRY"
+    );
+
+
+  const rateBox =
+    document.getElementById(
+      "purchaseRateBox"
+    );
+
+
+  const rateInput =
+    document.getElementById(
+      "purchaseExchangeRate"
+    );
+
+
+  if (rateBox) {
+
+    rateBox.style.display =
+      currency === "USD"
+        ? ""
+        : "none";
+
+  }
+
+
+  if (currency === "TRY" && rateInput) {
+    rateInput.value = "1";
+  }
+
+
+  renderPurchaseItems();
+
+}
+
+
+function toggleSaleCurrency() {
+
+  const currency =
+    getCurrency(
+      "saleCurrency",
+      "TRY"
+    );
+
+
+  const rateBox =
+    document.getElementById(
+      "saleRateBox"
+    );
+
+
+  const rateInput =
+    document.getElementById(
+      "saleExchangeRate"
+    );
+
+
+  if (rateBox) {
+
+    rateBox.style.display =
+      currency === "USD"
+        ? ""
+        : "none";
+
+  }
+
+
+  if (currency === "TRY" && rateInput) {
+    rateInput.value = "1";
+  }
+
+
+  renderSaleItems();
+
+}
+
+
+/* =========================================================
+   SATIN ALMA HAZIRLIK
+========================================================= */
+
+function preparePurchasePage() {
+
+  fillPartySelect(
+    "purchaseParty",
+    ["supplier", "both"]
+  );
+
+  fillProductSelect(
+    "purchaseProduct"
+  );
+
+
+  const currency =
+    document.getElementById(
+      "purchaseCurrency"
+    );
+
+  if (currency && !currency.value) {
+    currency.value = "TRY";
+  }
+
+
+  togglePurchaseCurrency();
+
+}
+
 
 function fillProductSelect(id) {
 
-  const select = $(id);
+  const select =
+    document.getElementById(id);
 
   if (!select) return;
 
@@ -1464,11 +1521,9 @@ function fillProductSelect(id) {
     products.map(p => `
 
       <option value="${p.id}">
-
         ${escapeHtml(p.code)}
         -
         ${escapeHtml(p.name)}
-
       </option>
 
     `).join("");
@@ -1481,7 +1536,8 @@ function fillPartySelect(
   allowedTypes
 ) {
 
-  const select = $(id);
+  const select =
+    document.getElementById(id);
 
   if (!select) return;
 
@@ -1500,9 +1556,7 @@ function fillPartySelect(
     filtered.map(p => `
 
       <option value="${p.id}">
-
         ${escapeHtml(p.name)}
-
       </option>
 
     `).join("");
@@ -1511,41 +1565,108 @@ function fillPartySelect(
 
 
 /* =========================================================
-   SATIN ALMA
+   YENİ ALIŞ FATURASI
 ========================================================= */
 
-function preparePurchasePage() {
+function openNewPurchase() {
 
-  fillPartySelect(
-    "purchaseParty",
-    ["supplier", "both"]
+  editingPurchaseId = null;
+  purchaseItems = [];
+
+  const form =
+    document.getElementById(
+      "purchaseForm"
+    );
+
+  if (form) {
+    form.classList.remove("hidden");
+  }
+
+
+  const history =
+    document.getElementById(
+      "purchaseHistory"
+    );
+
+  if (history) {
+    history.classList.remove("hidden");
+  }
+
+
+  clearPurchaseFields();
+
+  setText(
+    "purchaseFormTitle",
+    "Yeni Alış Faturası"
   );
 
-  fillProductSelect(
-    "purchaseProduct"
-  );
+
+  const button =
+    document.getElementById(
+      "savePurchaseBtn"
+    );
+
+  if (button) {
+    button.textContent =
+      "💾 Alış Faturasını Kaydet";
+  }
+
+
+  renderPurchaseItems();
 
 }
 
 
+function closePurchaseForm() {
+
+  editingPurchaseId = null;
+  purchaseItems = [];
+
+  const form =
+    document.getElementById(
+      "purchaseForm"
+    );
+
+  if (form) {
+    form.classList.add("hidden");
+  }
+
+}
+
+
+/* =========================================================
+   ALIŞ ÜRÜN EKLE
+========================================================= */
+
 function addPurchaseItem() {
 
   const productId =
-    $("purchaseProduct")?.value;
+    document.getElementById(
+      "purchaseProduct"
+    )?.value;
+
 
   const qty =
     number(
-      $("purchaseQty")?.value
+      document.getElementById(
+        "purchaseQty"
+      )?.value
     );
+
 
   const price =
     number(
-      $("purchasePrice")?.value
+      document.getElementById(
+        "purchasePrice"
+      )?.value
     );
+
 
   const vat =
     number(
-      $("purchaseVat")?.value
+      document.getElementById(
+        "purchaseVat"
+      )?.value
     );
 
 
@@ -1564,6 +1685,17 @@ function addPurchaseItem() {
 
     showToast(
       "Lütfen miktar girin."
+    );
+
+    return;
+
+  }
+
+
+  if (price < 0) {
+
+    showToast(
+      "Birim fiyatı kontrol edin."
     );
 
     return;
@@ -1592,51 +1724,50 @@ function addPurchaseItem() {
 
   purchaseItems.push({
 
-    product_id:
-      product.id,
-
-    product_name:
-      product.name,
-
-    code:
-      product.code,
-
-    quantity:
-      qty,
-
-    unit_price:
-      price,
-
-    vat_rate:
-      vat
+    product_id: product.id,
+    product_name: product.name,
+    code: product.code,
+    quantity: qty,
+    unit_price: price,
+    vat_rate: vat
 
   });
 
 
-  if ($("purchaseQty")) {
-    $("purchaseQty").value = "";
-  }
+  document.getElementById(
+    "purchaseQty"
+  ).value = "";
 
-  if ($("purchasePrice")) {
-    $("purchasePrice").value = "";
-  }
+
+  document.getElementById(
+    "purchasePrice"
+  ).value = "";
 
 
   renderPurchaseItems();
 
-  showToast(
-    "Ürün faturaya eklendi."
-  );
-
 }
 
+
+/* =========================================================
+   ALIŞ KALEMLERİ
+========================================================= */
 
 function renderPurchaseItems() {
 
   const container =
-    $("purchaseItems");
+    document.getElementById(
+      "purchaseItems"
+    );
 
   if (!container) return;
+
+
+  const currency =
+    getCurrency(
+      "purchaseCurrency",
+      "TRY"
+    );
 
 
   if (!purchaseItems.length) {
@@ -1690,50 +1821,53 @@ function renderPurchaseItems() {
               100;
 
             const total =
-              subtotal +
-              vatAmount;
+              subtotal + vatAmount;
 
 
             return `
 
               <tr>
 
-                <td>
-                  ${index + 1}
-                </td>
+                <td>${index + 1}</td>
 
                 <td>
                   ${escapeHtml(item.code)}
                   -
-                  ${escapeHtml(
-                    item.product_name
+                  ${escapeHtml(item.product_name)}
+                </td>
+
+                <td>${item.quantity}</td>
+
+                <td>
+                  ${invoiceMoney(
+                    item.unit_price,
+                    currency
+                  )}
+                </td>
+
+                <td>%${item.vat_rate}</td>
+
+                <td>
+                  ${invoiceMoney(
+                    subtotal,
+                    currency
                   )}
                 </td>
 
                 <td>
-                  ${item.quantity}
-                </td>
-
-                <td>
-                  ${money(
-                    item.unit_price
+                  ${invoiceMoney(
+                    vatAmount,
+                    currency
                   )}
                 </td>
 
                 <td>
-                  %${item.vat_rate}
-                </td>
-
-                <td>
-                  ${money(subtotal)}
-                </td>
-
-                <td>
-                  ${money(vatAmount)}
-                </td>
-
-                <td>
-                  ${money(total)}
+                  <strong>
+                    ${invoiceMoney(
+                      total,
+                      currency
+                    )}
+                  </strong>
                 </td>
 
                 <td>
@@ -1768,10 +1902,7 @@ function renderPurchaseItems() {
 
 function removePurchaseItem(index) {
 
-  purchaseItems.splice(
-    index,
-    1
-  );
+  purchaseItems.splice(index, 1);
 
   renderPurchaseItems();
 
@@ -1781,7 +1912,6 @@ function removePurchaseItem(index) {
 function calculatePurchaseTotals() {
 
   let subtotal = 0;
-
   let vatTotal = 0;
 
 
@@ -1801,20 +1931,36 @@ function calculatePurchaseTotals() {
   });
 
 
+  const currency =
+    getCurrency(
+      "purchaseCurrency",
+      "TRY"
+    );
+
+
   setText(
     "purchaseSubtotal",
-    money(subtotal)
+    invoiceMoney(
+      subtotal,
+      currency
+    )
   );
+
 
   setText(
     "purchaseVatTotal",
-    money(vatTotal)
+    invoiceMoney(
+      vatTotal,
+      currency
+    )
   );
+
 
   setText(
     "purchaseGrandTotal",
-    money(
-      subtotal + vatTotal
+    invoiceMoney(
+      subtotal + vatTotal,
+      currency
     )
   );
 
@@ -1822,13 +1968,818 @@ function calculatePurchaseTotals() {
   return {
 
     subtotal,
-
     vatTotal,
-
-    total:
-      subtotal + vatTotal
+    total: subtotal + vatTotal
 
   };
+
+}
+
+
+/* =========================================================
+   ALIŞ FATURASI KAYDET
+========================================================= */
+
+async function savePurchase() {
+
+  if (!purchaseItems.length) {
+
+    showToast(
+      "Faturaya en az bir ürün ekleyin."
+    );
+
+    return;
+
+  }
+
+
+  const partyId =
+    document
+      .getElementById("purchaseParty")
+      ?.value || null;
+
+
+  const invoiceNo =
+    document
+      .getElementById("purchaseInvoiceNo")
+      ?.value
+      .trim() || "";
+
+
+  const invoiceDate =
+    document
+      .getElementById("purchaseDate")
+      ?.value ||
+    today();
+
+
+  const note =
+    document
+      .getElementById("purchaseNote")
+      ?.value
+      .trim() || "";
+
+
+  const currency =
+    getCurrency(
+      "purchaseCurrency",
+      "TRY"
+    );
+
+
+  const exchangeRate =
+    currency === "USD"
+      ? getExchangeRate(
+          "purchaseExchangeRate"
+        )
+      : 1;
+
+
+  const totals =
+    calculatePurchaseTotals();
+
+
+  try {
+
+    const data = {
+
+      invoice_no: invoiceNo,
+      party_id: partyId,
+      invoice_date: invoiceDate,
+      subtotal: totals.subtotal,
+      vat_rate: 0,
+      vat_amount: totals.vatTotal,
+      total: totals.total,
+      note
+
+    };
+
+
+    /*
+      currency ve exchange_rate kolonları
+      veritabanında varsa eklenir.
+    */
+
+    data.currency = currency;
+    data.exchange_rate = exchangeRate;
+
+
+    let purchaseId;
+
+
+    if (editingPurchaseId) {
+
+      const old =
+        purchases.find(
+          x =>
+            String(x.id) ===
+            String(editingPurchaseId)
+        );
+
+
+      if (old) {
+
+        await restorePurchaseStock(old.id);
+
+      }
+
+
+      const result =
+        await db
+          .from("purchases")
+          .update(data)
+          .eq(
+            "id",
+            editingPurchaseId
+          )
+          .select()
+          .single();
+
+
+      if (result.error) {
+        throw result.error;
+      }
+
+
+      purchaseId =
+        result.data.id;
+
+
+      await db
+        .from("purchase_items")
+        .delete()
+        .eq(
+          "purchase_id",
+          purchaseId
+        );
+
+
+      await db
+        .from("stock_movements")
+        .delete()
+        .eq("source_id", purchaseId)
+        .eq("source_type", "purchase");
+
+    }
+
+    else {
+
+      const result =
+        await db
+          .from("purchases")
+          .insert(data)
+          .select()
+          .single();
+
+
+      if (result.error) {
+        throw result.error;
+      }
+
+
+      purchaseId =
+        result.data.id;
+
+    }
+
+
+    const items =
+      purchaseItems.map(item => {
+
+        const subtotal =
+          item.quantity *
+          item.unit_price;
+
+        const vatAmount =
+          subtotal *
+          item.vat_rate /
+          100;
+
+
+        return {
+
+          purchase_id:
+            purchaseId,
+
+          product_id:
+            item.product_id,
+
+          quantity:
+            item.quantity,
+
+          unit_price:
+            item.unit_price,
+
+          vat_rate:
+            item.vat_rate,
+
+          line_subtotal:
+            subtotal,
+
+          vat_amount:
+            vatAmount,
+
+          line_total:
+            subtotal + vatAmount
+
+        };
+
+      });
+
+
+    const itemsResult =
+      await db
+        .from("purchase_items")
+        .insert(items);
+
+
+    if (itemsResult.error) {
+      throw itemsResult.error;
+    }
+
+
+    for (const item of purchaseItems) {
+
+      const product =
+        products.find(
+          p =>
+            String(p.id) ===
+            String(item.product_id)
+        );
+
+
+      if (!product) continue;
+
+
+      const newStock =
+        number(product.stock_quantity) +
+        number(item.quantity);
+
+
+      const updateResult =
+        await db
+          .from("products")
+          .update({
+
+            stock_quantity:
+              newStock,
+
+            purchase_price:
+              item.unit_price
+
+          })
+          .eq(
+            "id",
+            item.product_id
+          );
+
+
+      if (updateResult.error) {
+        throw updateResult.error;
+      }
+
+
+      const movementResult =
+        await db
+          .from("stock_movements")
+          .insert({
+
+            product_id:
+              item.product_id,
+
+            party_id:
+              partyId,
+
+            type:
+              "in",
+
+            quantity:
+              item.quantity,
+
+            source_type:
+              "purchase",
+
+            source_id:
+              purchaseId,
+
+            note:
+              `Alış faturası ${invoiceNo}`
+
+          });
+
+
+      if (movementResult.error) {
+        throw movementResult.error;
+      }
+
+    }
+
+
+    showToast(
+      editingPurchaseId
+        ? "Alış faturası güncellendi."
+        : "Alış faturası kaydedildi."
+    );
+
+
+    closePurchaseForm();
+
+    await loadAll();
+
+  }
+
+  catch (error) {
+
+    console.error(error);
+
+    showToast(
+      "Alış faturası kaydedilemedi: " +
+      error.message
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   ALIŞ STOK GERİ AL
+========================================================= */
+
+async function restorePurchaseStock(purchaseId) {
+
+  const result =
+    await db
+      .from("purchase_items")
+      .select("*")
+      .eq(
+        "purchase_id",
+        purchaseId
+      );
+
+
+  if (result.error) {
+    throw result.error;
+  }
+
+
+  for (const item of result.data || []) {
+
+    const product =
+      products.find(
+        p =>
+          String(p.id) ===
+          String(item.product_id)
+      );
+
+
+    if (!product) continue;
+
+
+    const newStock =
+      number(product.stock_quantity) -
+      number(item.quantity);
+
+
+    const update =
+      await db
+        .from("products")
+        .update({
+          stock_quantity: newStock
+        })
+        .eq(
+          "id",
+          item.product_id
+        );
+
+
+    if (update.error) {
+      throw update.error;
+    }
+
+  }
+
+}
+
+
+/* =========================================================
+   ALIŞ FATURALARI
+========================================================= */
+
+function renderPurchaseHistory() {
+
+  const container =
+    document.getElementById(
+      "purchaseHistory"
+    );
+
+  if (!container) return;
+
+
+  if (!purchases.length) {
+
+    container.innerHTML =
+      `<div class="empty">
+        Henüz alış faturası yok.
+      </div>`;
+
+    return;
+
+  }
+
+
+  container.innerHTML = `
+
+    <div class="panel-header">
+
+      <h2>📋 Kayıtlı Alış Faturaları</h2>
+
+      <button
+        class="secondary"
+        onclick="exportPurchasesCSV()"
+      >
+        Excel / CSV
+      </button>
+
+    </div>
+
+
+    <table>
+
+      <thead>
+
+        <tr>
+
+          <th>Fatura No</th>
+          <th>Tarih</th>
+          <th>Tedarikçi</th>
+          <th>Para Birimi</th>
+          <th>Toplam</th>
+          <th>İşlem</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody>
+
+        ${purchases.map(p => {
+
+          const party =
+            parties.find(
+              x =>
+                String(x.id) ===
+                String(p.party_id)
+            );
+
+
+          const currency =
+            p.currency ||
+            "TRY";
+
+
+          return `
+
+            <tr
+              style="cursor:pointer"
+              onclick="editPurchase('${p.id}')"
+            >
+
+              <td>
+                <strong>
+                  ${escapeHtml(
+                    p.invoice_no || "-"
+                  )}
+                </strong>
+              </td>
+
+              <td>
+                ${p.invoice_date || "-"}
+              </td>
+
+              <td>
+                ${escapeHtml(
+                  party?.name || "-"
+                )}
+              </td>
+
+              <td>
+                ${currency === "USD"
+                  ? "USD"
+                  : "TL"}
+              </td>
+
+              <td>
+                <strong>
+                  ${invoiceMoney(
+                    p.total,
+                    currency
+                  )}
+                </strong>
+              </td>
+
+              <td>
+
+                <button
+                  class="secondary"
+                  onclick="
+                    event.stopPropagation();
+                    editPurchase('${p.id}')
+                  "
+                >
+                  ✏️ Değiştir
+                </button>
+
+                <button
+                  class="danger"
+                  onclick="
+                    event.stopPropagation();
+                    deletePurchase('${p.id}')
+                  "
+                >
+                  Sil
+                </button>
+
+              </td>
+
+            </tr>
+
+          `;
+
+        }).join("")}
+
+      </tbody>
+
+    </table>
+
+  `;
+
+}
+
+
+/* =========================================================
+   ALIŞ FATURASI DÜZENLE
+========================================================= */
+
+async function editPurchase(id) {
+
+  const purchase =
+    purchases.find(
+      x =>
+        String(x.id) ===
+        String(id)
+    );
+
+
+  if (!purchase) {
+
+    showToast(
+      "Fatura bulunamadı."
+    );
+
+    return;
+
+  }
+
+
+  editingPurchaseId = id;
+
+
+  const form =
+    document.getElementById(
+      "purchaseForm"
+    );
+
+  if (form) {
+    form.classList.remove("hidden");
+  }
+
+
+  setText(
+    "purchaseFormTitle",
+    "Alış Faturasını Düzenle"
+  );
+
+
+  const saveBtn =
+    document.getElementById(
+      "savePurchaseBtn"
+    );
+
+  if (saveBtn) {
+    saveBtn.textContent =
+      "💾 Değişiklikleri Kaydet";
+  }
+
+
+  const invoice =
+    document.getElementById(
+      "purchaseInvoiceNo"
+    );
+
+  const date =
+    document.getElementById(
+      "purchaseDate"
+    );
+
+  const party =
+    document.getElementById(
+      "purchaseParty"
+    );
+
+  const note =
+    document.getElementById(
+      "purchaseNote"
+    );
+
+  const currency =
+    document.getElementById(
+      "purchaseCurrency"
+    );
+
+  const rate =
+    document.getElementById(
+      "purchaseExchangeRate"
+    );
+
+
+  if (invoice) {
+    invoice.value =
+      purchase.invoice_no || "";
+  }
+
+  if (date) {
+    date.value =
+      purchase.invoice_date || today();
+  }
+
+  if (party) {
+    party.value =
+      purchase.party_id || "";
+  }
+
+  if (note) {
+    note.value =
+      purchase.note || "";
+  }
+
+  if (currency) {
+    currency.value =
+      purchase.currency || "TRY";
+  }
+
+  if (rate) {
+    rate.value =
+      purchase.exchange_rate || 1;
+  }
+
+
+  togglePurchaseCurrency();
+
+
+  const itemsResult =
+    await db
+      .from("purchase_items")
+      .select("*")
+      .eq(
+        "purchase_id",
+        id
+      );
+
+
+  if (itemsResult.error) {
+
+    showToast(
+      "Fatura kalemleri alınamadı: " +
+      itemsResult.error.message
+    );
+
+    return;
+
+  }
+
+
+  purchaseItems =
+    (itemsResult.data || []).map(item => {
+
+      const product =
+        products.find(
+          p =>
+            String(p.id) ===
+            String(item.product_id)
+        );
+
+
+      return {
+
+        product_id:
+          item.product_id,
+
+        product_name:
+          product?.name || "",
+
+        code:
+          product?.code || "",
+
+        quantity:
+          number(item.quantity),
+
+        unit_price:
+          number(item.unit_price),
+
+        vat_rate:
+          number(item.vat_rate)
+
+      };
+
+    });
+
+
+  renderPurchaseItems();
+
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+
+}
+
+
+/* =========================================================
+   ALIŞ FATURASI SİL
+========================================================= */
+
+async function deletePurchase(id) {
+
+  if (
+    !confirm(
+      "Bu alış faturasını silmek istediğinize emin misiniz?"
+    )
+  ) return;
+
+
+  try {
+
+    await restorePurchaseStock(id);
+
+
+    const movementDelete =
+      await db
+        .from("stock_movements")
+        .delete()
+        .eq("source_type", "purchase")
+        .eq("source_id", id);
+
+
+    if (movementDelete.error) {
+      throw movementDelete.error;
+    }
+
+
+    const itemDelete =
+      await db
+        .from("purchase_items")
+        .delete()
+        .eq("purchase_id", id);
+
+
+    if (itemDelete.error) {
+      throw itemDelete.error;
+    }
+
+
+    const purchaseDelete =
+      await db
+        .from("purchases")
+        .delete()
+        .eq("id", id);
+
+
+    if (purchaseDelete.error) {
+      throw purchaseDelete.error;
+    }
+
+
+    showToast(
+      "Alış faturası silindi."
+    );
+
+
+    await loadAll();
+
+  }
+
+  catch (error) {
+
+    console.error(error);
+
+    showToast(
+      "Fatura silinemedi: " +
+      error.message
+    );
+
+  }
 
 }
 
@@ -1848,27 +2799,111 @@ function prepareSalePage() {
     "saleProduct"
   );
 
+
+  const currency =
+    document.getElementById(
+      "saleCurrency"
+    );
+
+  if (currency && !currency.value) {
+    currency.value = "TRY";
+  }
+
+
+  toggleSaleCurrency();
+
 }
 
+
+function openNewSale() {
+
+  editingSaleId = null;
+  saleItems = [];
+
+  const form =
+    document.getElementById(
+      "saleForm"
+    );
+
+  if (form) {
+    form.classList.remove("hidden");
+  }
+
+
+  clearSaleFields();
+
+  setText(
+    "saleFormTitle",
+    "Yeni Satış Faturası"
+  );
+
+
+  const button =
+    document.getElementById(
+      "saveSaleBtn"
+    );
+
+  if (button) {
+    button.textContent =
+      "💾 Satış Faturasını Kaydet";
+  }
+
+
+  renderSaleItems();
+
+}
+
+
+function closeSaleForm() {
+
+  editingSaleId = null;
+  saleItems = [];
+
+  const form =
+    document.getElementById(
+      "saleForm"
+    );
+
+  if (form) {
+    form.classList.add("hidden");
+  }
+
+}
+
+
+/* =========================================================
+   SATIŞ ÜRÜN EKLE
+========================================================= */
 
 function addSaleItem() {
 
   const productId =
-    $("saleProduct")?.value;
+    document.getElementById(
+      "saleProduct"
+    )?.value;
+
 
   const qty =
     number(
-      $("saleQty")?.value
+      document.getElementById(
+        "saleQty"
+      )?.value
     );
+
 
   const price =
     number(
-      $("salePrice")?.value
+      document.getElementById(
+        "salePrice"
+      )?.value
     );
+
 
   const vat =
     number(
-      $("saleVat")?.value
+      document.getElementById(
+        "saleVat"
+      )?.value
     );
 
 
@@ -1953,30 +2988,40 @@ function addSaleItem() {
   });
 
 
-  if ($("saleQty")) {
-    $("saleQty").value = "";
-  }
+  document.getElementById(
+    "saleQty"
+  ).value = "";
 
-  if ($("salePrice")) {
-    $("salePrice").value = "";
-  }
+
+  document.getElementById(
+    "salePrice"
+  ).value = "";
 
 
   renderSaleItems();
 
-  showToast(
-    "Ürün faturaya eklendi."
-  );
-
 }
 
+
+/* =========================================================
+   SATIŞ KALEMLERİ
+========================================================= */
 
 function renderSaleItems() {
 
   const container =
-    $("saleItems");
+    document.getElementById(
+      "saleItems"
+    );
 
   if (!container) return;
+
+
+  const currency =
+    getCurrency(
+      "saleCurrency",
+      "TRY"
+    );
 
 
   if (!saleItems.length) {
@@ -2030,50 +3075,53 @@ function renderSaleItems() {
               100;
 
             const total =
-              subtotal +
-              vatAmount;
+              subtotal + vatAmount;
 
 
             return `
 
               <tr>
 
-                <td>
-                  ${index + 1}
-                </td>
+                <td>${index + 1}</td>
 
                 <td>
                   ${escapeHtml(item.code)}
                   -
-                  ${escapeHtml(
-                    item.product_name
+                  ${escapeHtml(item.product_name)}
+                </td>
+
+                <td>${item.quantity}</td>
+
+                <td>
+                  ${invoiceMoney(
+                    item.unit_price,
+                    currency
+                  )}
+                </td>
+
+                <td>%${item.vat_rate}</td>
+
+                <td>
+                  ${invoiceMoney(
+                    subtotal,
+                    currency
                   )}
                 </td>
 
                 <td>
-                  ${item.quantity}
-                </td>
-
-                <td>
-                  ${money(
-                    item.unit_price
+                  ${invoiceMoney(
+                    vatAmount,
+                    currency
                   )}
                 </td>
 
                 <td>
-                  %${item.vat_rate}
-                </td>
-
-                <td>
-                  ${money(subtotal)}
-                </td>
-
-                <td>
-                  ${money(vatAmount)}
-                </td>
-
-                <td>
-                  ${money(total)}
+                  <strong>
+                    ${invoiceMoney(
+                      total,
+                      currency
+                    )}
+                  </strong>
                 </td>
 
                 <td>
@@ -2108,10 +3156,7 @@ function renderSaleItems() {
 
 function removeSaleItem(index) {
 
-  saleItems.splice(
-    index,
-    1
-  );
+  saleItems.splice(index, 1);
 
   renderSaleItems();
 
@@ -2121,7 +3166,6 @@ function removeSaleItem(index) {
 function calculateSaleTotals() {
 
   let subtotal = 0;
-
   let vatTotal = 0;
 
 
@@ -2141,20 +3185,36 @@ function calculateSaleTotals() {
   });
 
 
+  const currency =
+    getCurrency(
+      "saleCurrency",
+      "TRY"
+    );
+
+
   setText(
     "saleSubtotal",
-    money(subtotal)
+    invoiceMoney(
+      subtotal,
+      currency
+    )
   );
+
 
   setText(
     "saleVatTotal",
-    money(vatTotal)
+    invoiceMoney(
+      vatTotal,
+      currency
+    )
   );
+
 
   setText(
     "saleGrandTotal",
-    money(
-      subtotal + vatTotal
+    invoiceMoney(
+      subtotal + vatTotal,
+      currency
     )
   );
 
@@ -2162,9 +3222,7 @@ function calculateSaleTotals() {
   return {
 
     subtotal,
-
     vatTotal,
-
     total:
       subtotal + vatTotal
 
@@ -2174,75 +3232,7 @@ function calculateSaleTotals() {
 
 
 /* =========================================================
-   YENİ ALIŞ FATURASI KAYDET / DEĞİŞTİR
-========================================================= */
-
-async function savePurchase() {
-
-  if (!purchaseItems.length) {
-
-    showToast(
-      "Faturaya en az bir ürün ekleyin."
-    );
-
-    return;
-
-  }
-
-
-  try {
-
-    if (editingPurchaseId) {
-
-      await updatePurchase(
-        editingPurchaseId
-      );
-
-      showToast(
-        "Alış faturası değiştirildi."
-      );
-
-      editingPurchaseId = null;
-
-      clearPurchase();
-
-      removeEditBanner("purchase");
-
-    }
-
-    else {
-
-      await createPurchase();
-
-      showToast(
-        "Alış faturası başarıyla kaydedildi."
-      );
-
-      clearPurchase();
-
-    }
-
-
-    await loadAll();
-
-  }
-
-  catch (error) {
-
-    console.error(error);
-
-    showToast(
-      "Alış faturası kaydedilemedi: " +
-      error.message
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   YENİ SATIŞ FATURASI KAYDET / DEĞİŞTİR
+   SATIŞ FATURASI KAYDET
 ========================================================= */
 
 async function saveSale() {
@@ -2258,38 +3248,330 @@ async function saveSale() {
   }
 
 
+  const partyId =
+    document
+      .getElementById("saleParty")
+      ?.value || null;
+
+
+  const invoiceNo =
+    document
+      .getElementById("saleInvoiceNo")
+      ?.value
+      .trim() || "";
+
+
+  const invoiceDate =
+    document
+      .getElementById("saleDate")
+      ?.value ||
+    today();
+
+
+  const note =
+    document
+      .getElementById("saleNote")
+      ?.value
+      .trim() || "";
+
+
+  const currency =
+    getCurrency(
+      "saleCurrency",
+      "TRY"
+    );
+
+
+  const exchangeRate =
+    currency === "USD"
+      ? getExchangeRate(
+          "saleExchangeRate"
+        )
+      : 1;
+
+
+  const totals =
+    calculateSaleTotals();
+
+
   try {
 
     if (editingSaleId) {
 
-      await updateSale(
+      await restoreSaleStock(
         editingSaleId
       );
 
-      showToast(
-        "Satış faturası değiştirildi."
-      );
+    }
 
-      editingSaleId = null;
 
-      clearSale();
+    for (const item of saleItems) {
 
-      removeEditBanner("sale");
+      const product =
+        products.find(
+          p =>
+            String(p.id) ===
+            String(item.product_id)
+        );
+
+
+      if (!product) {
+        throw new Error(
+          "Ürün bulunamadı."
+        );
+      }
+
+
+      const newStock =
+        number(product.stock_quantity) -
+        number(item.quantity);
+
+
+      if (newStock < 0) {
+
+        throw new Error(
+          `${product.name} için stok yetersiz.`
+        );
+
+      }
+
+    }
+
+
+    const data = {
+
+      invoice_no: invoiceNo,
+      party_id: partyId,
+      invoice_date: invoiceDate,
+      subtotal: totals.subtotal,
+      vat_rate: 0,
+      vat_amount: totals.vatTotal,
+      total: totals.total,
+      note
+
+    };
+
+
+    data.currency = currency;
+    data.exchange_rate = exchangeRate;
+
+
+    let saleId;
+
+
+    if (editingSaleId) {
+
+      const result =
+        await db
+          .from("sales")
+          .update(data)
+          .eq(
+            "id",
+            editingSaleId
+          )
+          .select()
+          .single();
+
+
+      if (result.error) {
+        throw result.error;
+      }
+
+
+      saleId =
+        result.data.id;
+
+
+      const deleteItems =
+        await db
+          .from("sale_items")
+          .delete()
+          .eq(
+            "sale_id",
+            saleId
+          );
+
+
+      if (deleteItems.error) {
+        throw deleteItems.error;
+      }
+
+
+      const deleteMovements =
+        await db
+          .from("stock_movements")
+          .delete()
+          .eq("source_type", "sale")
+          .eq("source_id", saleId);
+
+
+      if (deleteMovements.error) {
+        throw deleteMovements.error;
+      }
 
     }
 
     else {
 
-      await createSale();
+      const result =
+        await db
+          .from("sales")
+          .insert(data)
+          .select()
+          .single();
 
-      showToast(
-        "Satış faturası başarıyla kaydedildi."
-      );
 
-      clearSale();
+      if (result.error) {
+        throw result.error;
+      }
+
+
+      saleId =
+        result.data.id;
 
     }
 
+
+    const items =
+      saleItems.map(item => {
+
+        const subtotal =
+          item.quantity *
+          item.unit_price;
+
+        const vatAmount =
+          subtotal *
+          item.vat_rate /
+          100;
+
+
+        return {
+
+          sale_id:
+            saleId,
+
+          product_id:
+            item.product_id,
+
+          quantity:
+            item.quantity,
+
+          unit_price:
+            item.unit_price,
+
+          vat_rate:
+            item.vat_rate,
+
+          line_subtotal:
+            subtotal,
+
+          vat_amount:
+            vatAmount,
+
+          line_total:
+            subtotal + vatAmount
+
+        };
+
+      });
+
+
+    const itemsResult =
+      await db
+        .from("sale_items")
+        .insert(items);
+
+
+    if (itemsResult.error) {
+      throw itemsResult.error;
+    }
+
+
+    for (const item of saleItems) {
+
+      const product =
+        products.find(
+          p =>
+            String(p.id) ===
+            String(item.product_id)
+        );
+
+
+      if (!product) continue;
+
+
+      const newStock =
+        number(product.stock_quantity) -
+        number(item.quantity);
+
+
+      const updateResult =
+        await db
+          .from("products")
+          .update({
+
+            stock_quantity:
+              newStock,
+
+            sale_price:
+              item.unit_price
+
+          })
+          .eq(
+            "id",
+            item.product_id
+          );
+
+
+      if (updateResult.error) {
+        throw updateResult.error;
+      }
+
+
+      const movementResult =
+        await db
+          .from("stock_movements")
+          .insert({
+
+            product_id:
+              item.product_id,
+
+            party_id:
+              partyId,
+
+            type:
+              "out",
+
+            quantity:
+              item.quantity,
+
+            source_type:
+              "sale",
+
+            source_id:
+              saleId,
+
+            note:
+              `Satış faturası ${invoiceNo}`
+
+          });
+
+
+      if (movementResult.error) {
+        throw movementResult.error;
+      }
+
+    }
+
+
+    showToast(
+      editingSaleId
+        ? "Satış faturası güncellendi."
+        : "Satış faturası kaydedildi."
+    );
+
+
+    closeSaleForm();
 
     await loadAll();
 
@@ -2310,831 +3592,10 @@ async function saveSale() {
 
 
 /* =========================================================
-   ALIŞ OLUŞTUR
+   SATIŞ STOK GERİ AL
 ========================================================= */
 
-async function createPurchase() {
-
-  const partyId =
-    $("purchaseParty")?.value ||
-    null;
-
-  const invoiceNo =
-    $("purchaseInvoiceNo")
-      ?.value
-      .trim() || "";
-
-  const invoiceDate =
-    $("purchaseDate")
-      ?.value ||
-    today();
-
-  const note =
-    $("purchaseNote")
-      ?.value
-      .trim() || "";
-
-
-  const totals =
-    calculatePurchaseTotals();
-
-
-  const result =
-    await db
-      .from("purchases")
-      .insert({
-
-        invoice_no:
-          invoiceNo,
-
-        party_id:
-          partyId,
-
-        invoice_date:
-          invoiceDate,
-
-        subtotal:
-          totals.subtotal,
-
-        vat_rate:
-          0,
-
-        vat_amount:
-          totals.vatTotal,
-
-        total:
-          totals.total,
-
-        note
-
-      })
-      .select()
-      .single();
-
-
-  if (result.error) {
-    throw result.error;
-  }
-
-
-  const purchaseId =
-    result.data.id;
-
-
-  const items =
-    purchaseItems.map(item => {
-
-      const subtotal =
-        item.quantity *
-        item.unit_price;
-
-      const vatAmount =
-        subtotal *
-        item.vat_rate /
-        100;
-
-
-      return {
-
-        purchase_id:
-          purchaseId,
-
-        product_id:
-          item.product_id,
-
-        quantity:
-          item.quantity,
-
-        unit_price:
-          item.unit_price,
-
-        vat_rate:
-          item.vat_rate,
-
-        line_subtotal:
-          subtotal,
-
-        vat_amount:
-          vatAmount,
-
-        line_total:
-          subtotal + vatAmount
-
-      };
-
-    });
-
-
-  const itemResult =
-    await db
-      .from("purchase_items")
-      .insert(items);
-
-
-  if (itemResult.error) {
-    throw itemResult.error;
-  }
-
-
-  for (const item of purchaseItems) {
-
-    const product =
-      products.find(
-        p =>
-          String(p.id) ===
-          String(item.product_id)
-      );
-
-
-    if (!product) {
-      continue;
-    }
-
-
-    const newStock =
-      number(product.stock_quantity) +
-      number(item.quantity);
-
-
-    const update =
-      await db
-        .from("products")
-        .update({
-
-          stock_quantity:
-            newStock,
-
-          purchase_price:
-            item.unit_price
-
-        })
-        .eq(
-          "id",
-          item.product_id
-        );
-
-
-    if (update.error) {
-      throw update.error;
-    }
-
-
-    const movement =
-      await db
-        .from("stock_movements")
-        .insert({
-
-          product_id:
-            item.product_id,
-
-          party_id:
-            partyId,
-
-          type:
-            "in",
-
-          quantity:
-            item.quantity,
-
-          source_type:
-            "purchase",
-
-          source_id:
-            purchaseId,
-
-          note:
-            `Alış faturası ${invoiceNo}`
-
-        });
-
-
-    if (movement.error) {
-      throw movement.error;
-    }
-
-  }
-
-}
-
-
-/* =========================================================
-   SATIŞ OLUŞTUR
-========================================================= */
-
-async function createSale() {
-
-  const partyId =
-    $("saleParty")?.value ||
-    null;
-
-  const invoiceNo =
-    $("saleInvoiceNo")
-      ?.value
-      .trim() || "";
-
-  const invoiceDate =
-    $("saleDate")
-      ?.value ||
-    today();
-
-  const note =
-    $("saleNote")
-      ?.value
-      .trim() || "";
-
-
-  for (const item of saleItems) {
-
-    const product =
-      products.find(
-        p =>
-          String(p.id) ===
-          String(item.product_id)
-      );
-
-
-    if (!product) {
-      throw new Error(
-        "Ürün bulunamadı."
-      );
-    }
-
-
-    if (
-      number(item.quantity) >
-      number(product.stock_quantity)
-    ) {
-
-      throw new Error(
-        `${product.name} için yeterli stok yok.`
-      );
-
-    }
-
-  }
-
-
-  const totals =
-    calculateSaleTotals();
-
-
-  const result =
-    await db
-      .from("sales")
-      .insert({
-
-        invoice_no:
-          invoiceNo,
-
-        party_id:
-          partyId,
-
-        invoice_date:
-          invoiceDate,
-
-        subtotal:
-          totals.subtotal,
-
-        vat_rate:
-          0,
-
-        vat_amount:
-          totals.vatTotal,
-
-        total:
-          totals.total,
-
-        note
-
-      })
-      .select()
-      .single();
-
-
-  if (result.error) {
-    throw result.error;
-  }
-
-
-  const saleId =
-    result.data.id;
-
-
-  const items =
-    saleItems.map(item => {
-
-      const subtotal =
-        item.quantity *
-        item.unit_price;
-
-      const vatAmount =
-        subtotal *
-        item.vat_rate /
-        100;
-
-
-      return {
-
-        sale_id:
-          saleId,
-
-        product_id:
-          item.product_id,
-
-        quantity:
-          item.quantity,
-
-        unit_price:
-          item.unit_price,
-
-        vat_rate:
-          item.vat_rate,
-
-        line_subtotal:
-          subtotal,
-
-        vat_amount:
-          vatAmount,
-
-        line_total:
-          subtotal + vatAmount
-
-      };
-
-    });
-
-
-  const itemResult =
-    await db
-      .from("sale_items")
-      .insert(items);
-
-
-  if (itemResult.error) {
-    throw itemResult.error;
-  }
-
-
-  for (const item of saleItems) {
-
-    const product =
-      products.find(
-        p =>
-          String(p.id) ===
-          String(item.product_id)
-      );
-
-
-    if (!product) {
-      continue;
-    }
-
-
-    const newStock =
-      number(product.stock_quantity) -
-      number(item.quantity);
-
-
-    if (newStock < 0) {
-
-      throw new Error(
-        `${product.name} için stok yetersiz.`
-      );
-
-    }
-
-
-    const update =
-      await db
-        .from("products")
-        .update({
-
-          stock_quantity:
-            newStock,
-
-          sale_price:
-            item.unit_price
-
-        })
-        .eq(
-          "id",
-          item.product_id
-        );
-
-
-    if (update.error) {
-      throw update.error;
-    }
-
-
-    const movement =
-      await db
-        .from("stock_movements")
-        .insert({
-
-          product_id:
-            item.product_id,
-
-          party_id:
-            partyId,
-
-          type:
-            "out",
-
-          quantity:
-            item.quantity,
-
-          source_type:
-            "sale",
-
-          source_id:
-            saleId,
-
-          note:
-            `Satış faturası ${invoiceNo}`
-
-        });
-
-
-    if (movement.error) {
-      throw movement.error;
-    }
-
-  }
-
-}
-
-
-/* =========================================================
-   FATURA DÜZENLEME
-========================================================= */
-
-async function editPurchase(id) {
-
-  try {
-
-    const purchase =
-      purchases.find(
-        x =>
-          String(x.id) ===
-          String(id)
-      );
-
-
-    if (!purchase) {
-      throw new Error(
-        "Fatura bulunamadı."
-      );
-    }
-
-
-    const result =
-      await db
-        .from("purchase_items")
-        .select("*")
-        .eq(
-          "purchase_id",
-          id
-        );
-
-
-    if (result.error) {
-      throw result.error;
-    }
-
-
-    editingPurchaseId = id;
-
-    editingSaleId = null;
-
-
-    if ($("purchaseInvoiceNo")) {
-      $("purchaseInvoiceNo").value =
-        purchase.invoice_no || "";
-    }
-
-
-    if ($("purchaseDate")) {
-      $("purchaseDate").value =
-        purchase.invoice_date ||
-        today();
-    }
-
-
-    if ($("purchaseParty")) {
-      $("purchaseParty").value =
-        purchase.party_id || "";
-    }
-
-
-    if ($("purchaseNote")) {
-      $("purchaseNote").value =
-        purchase.note || "";
-    }
-
-
-    purchaseItems =
-      (result.data || []).map(item => {
-
-        const product =
-          products.find(
-            p =>
-              String(p.id) ===
-              String(item.product_id)
-          );
-
-
-        return {
-
-          product_id:
-            item.product_id,
-
-          product_name:
-            product?.name || "",
-
-          code:
-            product?.code || "",
-
-          quantity:
-            number(item.quantity),
-
-          unit_price:
-            number(item.unit_price),
-
-          vat_rate:
-            number(item.vat_rate)
-
-        };
-
-      });
-
-
-    renderPurchaseItems();
-
-    showEditBanner(
-      "purchase",
-      id
-    );
-
-
-    const page =
-      $("purchase");
-
-    if (page) {
-
-      page.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-      });
-
-    }
-
-    showToast(
-      "Fatura düzenleme moduna alındı."
-    );
-
-  }
-
-  catch (error) {
-
-    console.error(error);
-
-    showToast(
-      "Fatura açılamadı: " +
-      error.message
-    );
-
-  }
-
-}
-
-
-async function editSale(id) {
-
-  try {
-
-    const sale =
-      sales.find(
-        x =>
-          String(x.id) ===
-          String(id)
-      );
-
-
-    if (!sale) {
-      throw new Error(
-        "Fatura bulunamadı."
-      );
-    }
-
-
-    const result =
-      await db
-        .from("sale_items")
-        .select("*")
-        .eq(
-          "sale_id",
-          id
-        );
-
-
-    if (result.error) {
-      throw result.error;
-    }
-
-
-    editingSaleId = id;
-
-    editingPurchaseId = null;
-
-
-    if ($("saleInvoiceNo")) {
-      $("saleInvoiceNo").value =
-        sale.invoice_no || "";
-    }
-
-
-    if ($("saleDate")) {
-      $("saleDate").value =
-        sale.invoice_date ||
-        today();
-    }
-
-
-    if ($("saleParty")) {
-      $("saleParty").value =
-        sale.party_id || "";
-    }
-
-
-    if ($("saleNote")) {
-      $("saleNote").value =
-        sale.note || "";
-    }
-
-
-    saleItems =
-      (result.data || []).map(item => {
-
-        const product =
-          products.find(
-            p =>
-              String(p.id) ===
-              String(item.product_id)
-          );
-
-
-        return {
-
-          product_id:
-            item.product_id,
-
-          product_name:
-            product?.name || "",
-
-          code:
-            product?.code || "",
-
-          quantity:
-            number(item.quantity),
-
-          unit_price:
-            number(item.unit_price),
-
-          vat_rate:
-            number(item.vat_rate)
-
-        };
-
-      });
-
-
-    renderSaleItems();
-
-    showEditBanner(
-      "sale",
-      id
-    );
-
-
-    const page =
-      $("sales");
-
-    if (page) {
-
-      page.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-      });
-
-    }
-
-    showToast(
-      "Fatura düzenleme moduna alındı."
-    );
-
-  }
-
-  catch (error) {
-
-    console.error(error);
-
-    showToast(
-      "Fatura açılamadı: " +
-      error.message
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   STOK GERİ AL
-========================================================= */
-
-async function restorePurchaseStock(
-  purchaseId
-) {
-
-  const result =
-    await db
-      .from("purchase_items")
-      .select("*")
-      .eq(
-        "purchase_id",
-        purchaseId
-      );
-
-
-  if (result.error) {
-    throw result.error;
-  }
-
-
-  for (
-    const item of result.data || []
-  ) {
-
-    const product =
-      products.find(
-        p =>
-          String(p.id) ===
-          String(item.product_id)
-      );
-
-
-    if (!product) {
-      continue;
-    }
-
-
-    const newStock =
-      number(product.stock_quantity) -
-      number(item.quantity);
-
-
-    if (newStock < 0) {
-
-      throw new Error(
-        `${product.name} için stok hesaplanamadı.`
-      );
-
-    }
-
-
-    const update =
-      await db
-        .from("products")
-        .update({
-          stock_quantity:
-            newStock
-        })
-        .eq(
-          "id",
-          product.id
-        );
-
-
-    if (update.error) {
-      throw update.error;
-    }
-
-
-    product.stock_quantity =
-      newStock;
-
-  }
-
-
-  return result.data || [];
-
-}
-
-
-async function restoreSaleStock(
-  saleId
-) {
+async function restoreSaleStock(saleId) {
 
   const result =
     await db
@@ -3151,9 +3612,7 @@ async function restoreSaleStock(
   }
 
 
-  for (
-    const item of result.data || []
-  ) {
+  for (const item of result.data || []) {
 
     const product =
       products.find(
@@ -3163,9 +3622,7 @@ async function restoreSaleStock(
       );
 
 
-    if (!product) {
-      continue;
-    }
+    if (!product) continue;
 
 
     const newStock =
@@ -3177,75 +3634,7 @@ async function restoreSaleStock(
       await db
         .from("products")
         .update({
-          stock_quantity:
-            newStock
-        })
-        .eq(
-          "id",
-          product.id
-        );
-
-
-    if (update.error) {
-      throw update.error;
-    }
-
-
-    product.stock_quantity =
-      newStock;
-
-  }
-
-
-  return result.data || [];
-
-}
-
-
-/* =========================================================
-   YENİ STOK UYGULA
-========================================================= */
-
-async function applyPurchaseStock(
-  items,
-  partyId,
-  purchaseId,
-  invoiceNo
-) {
-
-  for (const item of items) {
-
-    const product =
-      products.find(
-        p =>
-          String(p.id) ===
-          String(item.product_id)
-      );
-
-
-    if (!product) {
-      throw new Error(
-        "Ürün bulunamadı."
-      );
-    }
-
-
-    const newStock =
-      number(product.stock_quantity) +
-      number(item.quantity);
-
-
-    const update =
-      await db
-        .from("products")
-        .update({
-
-          stock_quantity:
-            newStock,
-
-          purchase_price:
-            number(item.unit_price)
-
+          stock_quantity: newStock
         })
         .eq(
           "id",
@@ -3257,918 +3646,31 @@ async function applyPurchaseStock(
       throw update.error;
     }
 
-
-    product.stock_quantity =
-      newStock;
-
-
-    product.purchase_price =
-      number(item.unit_price);
-
-
-    const movement =
-      await db
-        .from("stock_movements")
-        .insert({
-
-          product_id:
-            item.product_id,
-
-          party_id:
-            partyId,
-
-          type:
-            "in",
-
-          quantity:
-            number(item.quantity),
-
-          source_type:
-            "purchase",
-
-          source_id:
-            purchaseId,
-
-          note:
-            `Alış faturası ${invoiceNo}`
-
-        });
-
-
-    if (movement.error) {
-      throw movement.error;
-    }
-
-  }
-
-}
-
-
-async function applySaleStock(
-  items,
-  partyId,
-  saleId,
-  invoiceNo
-) {
-
-  for (const item of items) {
-
-    const product =
-      products.find(
-        p =>
-          String(p.id) ===
-          String(item.product_id)
-      );
-
-
-    if (!product) {
-      throw new Error(
-        "Ürün bulunamadı."
-      );
-    }
-
-
-    const newStock =
-      number(product.stock_quantity) -
-      number(item.quantity);
-
-
-    if (newStock < 0) {
-
-      throw new Error(
-        `${product.name} için yeterli stok yok.`
-      );
-
-    }
-
-
-    const update =
-      await db
-        .from("products")
-        .update({
-
-          stock_quantity:
-            newStock,
-
-          sale_price:
-            number(item.unit_price)
-
-        })
-        .eq(
-          "id",
-          item.product_id
-        );
-
-
-    if (update.error) {
-      throw update.error;
-    }
-
-
-    product.stock_quantity =
-      newStock;
-
-
-    product.sale_price =
-      number(item.unit_price);
-
-
-    const movement =
-      await db
-        .from("stock_movements")
-        .insert({
-
-          product_id:
-            item.product_id,
-
-          party_id:
-            partyId,
-
-          type:
-            "out",
-
-          quantity:
-            number(item.quantity),
-
-          source_type:
-            "sale",
-
-          source_id:
-            saleId,
-
-          note:
-            `Satış faturası ${invoiceNo}`
-
-        });
-
-
-    if (movement.error) {
-      throw movement.error;
-    }
-
   }
 
 }
 
 
 /* =========================================================
-   ALIŞ FATURASI GÜNCELLE
+   SATIŞ FATURALARI
 ========================================================= */
 
-async function updatePurchase(id) {
+function renderSaleHistory() {
 
-  if (!purchaseItems.length) {
-
-    throw new Error(
-      "Faturada en az bir ürün olmalı."
+  const container =
+    document.getElementById(
+      "saleHistory"
     );
 
-  }
-
-
-  await restorePurchaseStock(id);
-
-
-  const partyId =
-    $("purchaseParty")?.value ||
-    null;
-
-  const invoiceNo =
-    $("purchaseInvoiceNo")
-      ?.value
-      .trim() || "";
-
-  const invoiceDate =
-    $("purchaseDate")
-      ?.value ||
-    today();
-
-  const note =
-    $("purchaseNote")
-      ?.value
-      .trim() || "";
-
-
-  const totals =
-    calculatePurchaseTotals();
-
-
-  const update =
-    await db
-      .from("purchases")
-      .update({
-
-        invoice_no:
-          invoiceNo,
-
-        party_id:
-          partyId,
-
-        invoice_date:
-          invoiceDate,
-
-        subtotal:
-          totals.subtotal,
-
-        vat_rate:
-          0,
-
-        vat_amount:
-          totals.vatTotal,
-
-        total:
-          totals.total,
-
-        note
-
-      })
-      .eq(
-        "id",
-        id
-      );
-
-
-  if (update.error) {
-    throw update.error;
-  }
-
-
-  const deleteItems =
-    await db
-      .from("purchase_items")
-      .delete()
-      .eq(
-        "purchase_id",
-        id
-      );
-
-
-  if (deleteItems.error) {
-    throw deleteItems.error;
-  }
-
-
-  const rows =
-    purchaseItems.map(item => {
-
-      const subtotal =
-        item.quantity *
-        item.unit_price;
-
-      const vatAmount =
-        subtotal *
-        item.vat_rate /
-        100;
-
-
-      return {
-
-        purchase_id:
-          id,
-
-        product_id:
-          item.product_id,
-
-        quantity:
-          item.quantity,
-
-        unit_price:
-          item.unit_price,
-
-        vat_rate:
-          item.vat_rate,
-
-        line_subtotal:
-          subtotal,
-
-        vat_amount:
-          vatAmount,
-
-        line_total:
-          subtotal + vatAmount
-
-      };
-
-    });
-
-
-  const insertItems =
-    await db
-      .from("purchase_items")
-      .insert(rows);
-
-
-  if (insertItems.error) {
-    throw insertItems.error;
-  }
-
-
-  await applyPurchaseStock(
-    purchaseItems,
-    partyId,
-    id,
-    invoiceNo
-  );
-
-}
-
-
-/* =========================================================
-   SATIŞ FATURASI GÜNCELLE
-========================================================= */
-
-async function updateSale(id) {
-
-  if (!saleItems.length) {
-
-    throw new Error(
-      "Faturada en az bir ürün olmalı."
-    );
-
-  }
-
-
-  await restoreSaleStock(id);
-
-
-  for (const item of saleItems) {
-
-    const product =
-      products.find(
-        p =>
-          String(p.id) ===
-          String(item.product_id)
-      );
-
-
-    if (!product) {
-
-      throw new Error(
-        "Ürün bulunamadı."
-      );
-
-    }
-
-
-    if (
-      number(item.quantity) >
-      number(product.stock_quantity)
-    ) {
-
-      throw new Error(
-        `${product.name} için yeterli stok yok.`
-      );
-
-    }
-
-  }
-
-
-  const partyId =
-    $("saleParty")?.value ||
-    null;
-
-  const invoiceNo =
-    $("saleInvoiceNo")
-      ?.value
-      .trim() || "";
-
-  const invoiceDate =
-    $("saleDate")
-      ?.value ||
-    today();
-
-  const note =
-    $("saleNote")
-      ?.value
-      .trim() || "";
-
-
-  const totals =
-    calculateSaleTotals();
-
-
-  const update =
-    await db
-      .from("sales")
-      .update({
-
-        invoice_no:
-          invoiceNo,
-
-        party_id:
-          partyId,
-
-        invoice_date:
-          invoiceDate,
-
-        subtotal:
-          totals.subtotal,
-
-        vat_rate:
-          0,
-
-        vat_amount:
-          totals.vatTotal,
-
-        total:
-          totals.total,
-
-        note
-
-      })
-      .eq(
-        "id",
-        id
-      );
-
-
-  if (update.error) {
-    throw update.error;
-  }
-
-
-  const deleteItems =
-    await db
-      .from("sale_items")
-      .delete()
-      .eq(
-        "sale_id",
-        id
-      );
-
-
-  if (deleteItems.error) {
-    throw deleteItems.error;
-  }
-
-
-  const rows =
-    saleItems.map(item => {
-
-      const subtotal =
-        item.quantity *
-        item.unit_price;
-
-      const vatAmount =
-        subtotal *
-        item.vat_rate /
-        100;
-
-
-      return {
-
-        sale_id:
-          id,
-
-        product_id:
-          item.product_id,
-
-        quantity:
-          item.quantity,
-
-        unit_price:
-          item.unit_price,
-
-        vat_rate:
-          item.vat_rate,
-
-        line_subtotal:
-          subtotal,
-
-        vat_amount:
-          vatAmount,
-
-        line_total:
-          subtotal + vatAmount
-
-      };
-
-    });
-
-
-  const insertItems =
-    await db
-      .from("sale_items")
-      .insert(rows);
-
-
-  if (insertItems.error) {
-    throw insertItems.error;
-  }
-
-
-  await applySaleStock(
-    saleItems,
-    partyId,
-    id,
-    invoiceNo
-  );
-
-}
-
-
-/* =========================================================
-   DÜZENLEME BANNER
-========================================================= */
-
-function showEditBanner(
-  type,
-  id
-) {
-
-  const page =
-    type === "purchase"
-      ? $("purchase")
-      : $("sales");
-
-  if (!page) return;
-
-
-  removeEditBanner(type);
-
-
-  const banner =
-    document.createElement("div");
-
-  banner.id =
-    `${type}EditBanner`;
-
-  banner.style.cssText = `
-    background:#fff7ed;
-    border:1px solid #fed7aa;
-    color:#9a3412;
-    padding:12px 15px;
-    border-radius:8px;
-    margin-bottom:15px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:10px;
-  `;
-
-
-  banner.innerHTML = `
-
-    <strong>
-      Fatura düzenleme modundasınız.
-    </strong>
-
-    <button
-      type="button"
-      class="secondary"
-      onclick="${
-        type === "purchase"
-          ? "cancelPurchaseEdit()"
-          : "cancelSaleEdit()"
-      }"
-    >
-      Düzenlemeyi İptal Et
-    </button>
-
-  `;
-
-
-  const firstPanel =
-    page.querySelector(".panel");
-
-
-  if (firstPanel) {
-
-    firstPanel.prepend(
-      banner
-    );
-
-  }
-
-}
-
-
-function removeEditBanner(type) {
-
-  const banner =
-    $(`${type}EditBanner`);
-
-  if (banner) {
-    banner.remove();
-  }
-
-}
-
-
-function cancelPurchaseEdit() {
-
-  editingPurchaseId = null;
-
-  purchaseItems = [];
-
-  removeEditBanner(
-    "purchase"
-  );
-
-  clearPurchase();
-
-}
-
-
-function cancelSaleEdit() {
-
-  editingSaleId = null;
-
-  saleItems = [];
-
-  removeEditBanner(
-    "sale"
-  );
-
-  clearSale();
-
-}
-
-
-/* =========================================================
-   FATURA TEMİZLE
-========================================================= */
-
-function clearPurchase() {
-
-  purchaseItems = [];
-
-
-  if ($("purchaseInvoiceNo")) {
-    $("purchaseInvoiceNo").value = "";
-  }
-
-  if ($("purchaseDate")) {
-    $("purchaseDate").value = today();
-  }
-
-  if ($("purchaseParty")) {
-    $("purchaseParty").value = "";
-  }
-
-  if ($("purchaseNote")) {
-    $("purchaseNote").value = "";
-  }
-
-
-  renderPurchaseItems();
-
-}
-
-
-function clearSale() {
-
-  saleItems = [];
-
-
-  if ($("saleInvoiceNo")) {
-    $("saleInvoiceNo").value = "";
-  }
-
-  if ($("saleDate")) {
-    $("saleDate").value = today();
-  }
-
-  if ($("saleParty")) {
-    $("saleParty").value = "";
-  }
-
-  if ($("saleNote")) {
-    $("saleNote").value = "";
-  }
-
-
-  renderSaleItems();
-
-}
-
-
-/* =========================================================
-   KAYITLI ALIŞ FATURALARI
-========================================================= */
-
-function renderSavedPurchases() {
-
-  const purchasePage =
-    $("purchase");
-
-  if (!purchasePage) return;
-
-
-  let container =
-    $("savedPurchases");
-
-
-  if (!container) {
-
-    container =
-      document.createElement("div");
-
-    container.id =
-      "savedPurchases";
-
-    container.className =
-      "panel";
-
-
-    purchasePage.appendChild(
-      container
-    );
-
-  }
-
-
-  if (!purchases.length) {
-
-    container.innerHTML = `
-
-      <div class="panel-header">
-
-        <h2>
-          Kayıtlı Alış Faturaları
-        </h2>
-
-      </div>
-
-      <div class="empty">
-        Henüz kayıtlı alış faturası yok.
-      </div>
-
-    `;
-
-    return;
-
-  }
-
-
-  container.innerHTML = `
-
-    <div class="panel-header">
-
-      <h2>
-        Kayıtlı Alış Faturaları
-      </h2>
-
-      <strong>
-        ${purchases.length} fatura
-      </strong>
-
-    </div>
-
-
-    <table>
-
-      <thead>
-
-        <tr>
-
-          <th>Fatura No</th>
-          <th>Tarih</th>
-          <th>Tedarikçi</th>
-          <th>Matrah</th>
-          <th>KDV</th>
-          <th>Toplam</th>
-          <th>İşlem</th>
-
-        </tr>
-
-      </thead>
-
-
-      <tbody>
-
-        ${purchases.map(p => {
-
-          const party =
-            parties.find(
-              x =>
-                String(x.id) ===
-                String(p.party_id)
-            );
-
-
-          return `
-
-            <tr>
-
-              <td>
-                <strong>
-                  ${escapeHtml(
-                    p.invoice_no || "-"
-                  )}
-                </strong>
-              </td>
-
-              <td>
-                ${p.invoice_date || "-"}
-              </td>
-
-              <td>
-                ${escapeHtml(
-                  party?.name || "-"
-                )}
-              </td>
-
-              <td>
-                ${money(p.subtotal)}
-              </td>
-
-              <td>
-                ${money(p.vat_amount)}
-              </td>
-
-              <td>
-                <strong>
-                  ${money(p.total)}
-                </strong>
-              </td>
-
-              <td>
-
-                <button
-                  class="primary"
-                  onclick="viewPurchase('${p.id}')"
-                >
-                  Aç
-                </button>
-
-                <button
-                  class="secondary"
-                  onclick="editPurchase('${p.id}')"
-                >
-                  Değiştir
-                </button>
-
-              </td>
-
-            </tr>
-
-          `;
-
-        }).join("")}
-
-      </tbody>
-
-    </table>
-
-  `;
-
-}
-
-
-/* =========================================================
-   KAYITLI SATIŞ FATURALARI
-========================================================= */
-
-function renderSavedSales() {
-
-  const salePage =
-    $("sales");
-
-  if (!salePage) return;
-
-
-  let container =
-    $("savedSales");
-
-
-  if (!container) {
-
-    container =
-      document.createElement("div");
-
-    container.id =
-      "savedSales";
-
-    container.className =
-      "panel";
-
-
-    salePage.appendChild(
-      container
-    );
-
-  }
+  if (!container) return;
 
 
   if (!sales.length) {
 
-    container.innerHTML = `
-
-      <div class="panel-header">
-
-        <h2>
-          Kayıtlı Satış Faturaları
-        </h2>
-
-      </div>
-
-      <div class="empty">
-        Henüz kayıtlı satış faturası yok.
-      </div>
-
-    `;
+    container.innerHTML =
+      `<div class="empty">
+        Henüz satış faturası yok.
+      </div>`;
 
     return;
 
@@ -4179,13 +3681,14 @@ function renderSavedSales() {
 
     <div class="panel-header">
 
-      <h2>
-        Kayıtlı Satış Faturaları
-      </h2>
+      <h2>📋 Kayıtlı Satış Faturaları</h2>
 
-      <strong>
-        ${sales.length} fatura
-      </strong>
+      <button
+        class="secondary"
+        onclick="exportSalesCSV()"
+      >
+        Excel / CSV
+      </button>
 
     </div>
 
@@ -4199,15 +3702,13 @@ function renderSavedSales() {
           <th>Fatura No</th>
           <th>Tarih</th>
           <th>Müşteri</th>
-          <th>Matrah</th>
-          <th>KDV</th>
+          <th>Para Birimi</th>
           <th>Toplam</th>
           <th>İşlem</th>
 
         </tr>
 
       </thead>
-
 
       <tbody>
 
@@ -4221,9 +3722,17 @@ function renderSavedSales() {
             );
 
 
+          const currency =
+            s.currency ||
+            "TRY";
+
+
           return `
 
-            <tr>
+            <tr
+              style="cursor:pointer"
+              onclick="editSale('${s.id}')"
+            >
 
               <td>
                 <strong>
@@ -4244,33 +3753,40 @@ function renderSavedSales() {
               </td>
 
               <td>
-                ${money(s.subtotal)}
-              </td>
-
-              <td>
-                ${money(s.vat_amount)}
+                ${currency === "USD"
+                  ? "USD"
+                  : "TL"}
               </td>
 
               <td>
                 <strong>
-                  ${money(s.total)}
+                  ${invoiceMoney(
+                    s.total,
+                    currency
+                  )}
                 </strong>
               </td>
 
               <td>
 
                 <button
-                  class="primary"
-                  onclick="viewSale('${s.id}')"
+                  class="secondary"
+                  onclick="
+                    event.stopPropagation();
+                    editSale('${s.id}')
+                  "
                 >
-                  Aç
+                  ✏️ Değiştir
                 </button>
 
                 <button
-                  class="secondary"
-                  onclick="editSale('${s.id}')"
+                  class="danger"
+                  onclick="
+                    event.stopPropagation();
+                    deleteSale('${s.id}')
+                  "
                 >
-                  Değiştir
+                  Sil
                 </button>
 
               </td>
@@ -4291,263 +3807,255 @@ function renderSavedSales() {
 
 
 /* =========================================================
-   ALIŞ FATURASI GÖRÜNTÜLE
+   SATIŞ FATURASI DÜZENLE
 ========================================================= */
 
-async function viewPurchase(id) {
+async function editSale(id) {
 
-  try {
+  const sale =
+    sales.find(
+      x =>
+        String(x.id) ===
+        String(id)
+    );
 
-    const purchase =
-      purchases.find(
-        x =>
-          String(x.id) ===
-          String(id)
+
+  if (!sale) {
+
+    showToast(
+      "Fatura bulunamadı."
+    );
+
+    return;
+
+  }
+
+
+  editingSaleId = id;
+
+
+  const form =
+    document.getElementById(
+      "saleForm"
+    );
+
+  if (form) {
+    form.classList.remove("hidden");
+  }
+
+
+  setText(
+    "saleFormTitle",
+    "Satış Faturasını Düzenle"
+  );
+
+
+  const saveBtn =
+    document.getElementById(
+      "saveSaleBtn"
+    );
+
+  if (saveBtn) {
+    saveBtn.textContent =
+      "💾 Değişiklikleri Kaydet";
+  }
+
+
+  const invoice =
+    document.getElementById(
+      "saleInvoiceNo"
+    );
+
+  const date =
+    document.getElementById(
+      "saleDate"
+    );
+
+  const party =
+    document.getElementById(
+      "saleParty"
+    );
+
+  const note =
+    document.getElementById(
+      "saleNote"
+    );
+
+  const currency =
+    document.getElementById(
+      "saleCurrency"
+    );
+
+  const rate =
+    document.getElementById(
+      "saleExchangeRate"
+    );
+
+
+  if (invoice) {
+    invoice.value =
+      sale.invoice_no || "";
+  }
+
+  if (date) {
+    date.value =
+      sale.invoice_date || today();
+  }
+
+  if (party) {
+    party.value =
+      sale.party_id || "";
+  }
+
+  if (note) {
+    note.value =
+      sale.note || "";
+  }
+
+  if (currency) {
+    currency.value =
+      sale.currency || "TRY";
+  }
+
+  if (rate) {
+    rate.value =
+      sale.exchange_rate || 1;
+  }
+
+
+  toggleSaleCurrency();
+
+
+  const itemsResult =
+    await db
+      .from("sale_items")
+      .select("*")
+      .eq(
+        "sale_id",
+        id
       );
 
 
-    if (!purchase) {
-      throw new Error(
-        "Fatura bulunamadı."
-      );
-    }
+  if (itemsResult.error) {
+
+    showToast(
+      "Fatura kalemleri alınamadı: " +
+      itemsResult.error.message
+    );
+
+    return;
+
+  }
 
 
-    const result =
-      await db
-        .from("purchase_items")
-        .select("*")
-        .eq(
-          "purchase_id",
-          id
+  saleItems =
+    (itemsResult.data || []).map(item => {
+
+      const product =
+        products.find(
+          p =>
+            String(p.id) ===
+            String(item.product_id)
         );
 
 
-    if (result.error) {
-      throw result.error;
+      return {
+
+        product_id:
+          item.product_id,
+
+        product_name:
+          product?.name || "",
+
+        code:
+          product?.code || "",
+
+        quantity:
+          number(item.quantity),
+
+        unit_price:
+          number(item.unit_price),
+
+        vat_rate:
+          number(item.vat_rate)
+
+      };
+
+    });
+
+
+  renderSaleItems();
+
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+
+}
+
+
+/* =========================================================
+   SATIŞ FATURASI SİL
+========================================================= */
+
+async function deleteSale(id) {
+
+  if (
+    !confirm(
+      "Bu satış faturasını silmek istediğinize emin misiniz?"
+    )
+  ) return;
+
+
+  try {
+
+    await restoreSaleStock(id);
+
+
+    const movementDelete =
+      await db
+        .from("stock_movements")
+        .delete()
+        .eq("source_type", "sale")
+        .eq("source_id", id);
+
+
+    if (movementDelete.error) {
+      throw movementDelete.error;
     }
 
 
-    const party =
-      parties.find(
-        x =>
-          String(x.id) ===
-          String(purchase.party_id)
-      );
+    const itemDelete =
+      await db
+        .from("sale_items")
+        .delete()
+        .eq("sale_id", id);
 
 
-    const rows =
-      (result.data || [])
-        .map((item, index) => {
+    if (itemDelete.error) {
+      throw itemDelete.error;
+    }
 
-          const product =
-            products.find(
-              p =>
-                String(p.id) ===
-                String(item.product_id)
-            );
 
+    const saleDelete =
+      await db
+        .from("sales")
+        .delete()
+        .eq("id", id);
 
-          return `
 
-            <tr>
+    if (saleDelete.error) {
+      throw saleDelete.error;
+    }
 
-              <td>
-                ${index + 1}
-              </td>
 
-              <td>
-                ${escapeHtml(
-                  product?.code || "-"
-                )}
-              </td>
-
-              <td>
-                ${escapeHtml(
-                  product?.name || "-"
-                )}
-              </td>
-
-              <td>
-                ${number(
-                  item.quantity
-                )}
-              </td>
-
-              <td>
-                ${money(
-                  item.unit_price
-                )}
-              </td>
-
-              <td>
-                %${number(
-                  item.vat_rate
-                )}
-              </td>
-
-              <td>
-                ${money(
-                  item.line_total
-                )}
-              </td>
-
-            </tr>
-
-          `;
-
-        })
-        .join("");
-
-
-    openModal(
-
-      "Alış Faturası",
-
-      `
-
-        <div class="report-row">
-
-          <span>
-            Fatura No
-          </span>
-
-          <strong>
-            ${escapeHtml(
-              purchase.invoice_no || "-"
-            )}
-          </strong>
-
-        </div>
-
-
-        <div class="report-row">
-
-          <span>
-            Tarih
-          </span>
-
-          <strong>
-            ${purchase.invoice_date || "-"}
-          </strong>
-
-        </div>
-
-
-        <div class="report-row">
-
-          <span>
-            Tedarikçi
-          </span>
-
-          <strong>
-            ${escapeHtml(
-              party?.name || "-"
-            )}
-          </strong>
-
-        </div>
-
-
-        <div style="overflow-x:auto;margin-top:20px;">
-
-          <table>
-
-            <thead>
-
-              <tr>
-
-                <th>#</th>
-                <th>Kod</th>
-                <th>Ürün</th>
-                <th>Miktar</th>
-                <th>Birim Fiyat</th>
-                <th>KDV</th>
-                <th>Toplam</th>
-
-              </tr>
-
-            </thead>
-
-            <tbody>
-              ${rows}
-            </tbody>
-
-          </table>
-
-        </div>
-
-
-        <div class="invoice-total">
-
-          <div>
-
-            <span>
-              Matrah
-            </span>
-
-            <strong>
-              ${money(
-                purchase.subtotal
-              )}
-            </strong>
-
-          </div>
-
-
-          <div>
-
-            <span>
-              KDV
-            </span>
-
-            <strong>
-              ${money(
-                purchase.vat_amount
-              )}
-            </strong>
-
-          </div>
-
-
-          <div class="grand-total">
-
-            <span>
-              Genel Toplam
-            </span>
-
-            <strong>
-              ${money(
-                purchase.total
-              )}
-            </strong>
-
-          </div>
-
-        </div>
-
-
-        <div class="form-buttons">
-
-          <button
-            class="secondary"
-            onclick="closeModal()"
-          >
-            Kapat
-          </button>
-
-          <button
-            class="primary"
-            onclick="closeModal();editPurchase('${id}')"
-          >
-            Değiştir
-          </button>
-
-        </div>
-
-      `
-
+    showToast(
+      "Satış faturası silindi."
     );
+
+
+    await loadAll();
 
   }
 
@@ -4556,7 +4064,7 @@ async function viewPurchase(id) {
     console.error(error);
 
     showToast(
-      "Fatura açılamadı: " +
+      "Fatura silinemedi: " +
       error.message
     );
 
@@ -4566,276 +4074,155 @@ async function viewPurchase(id) {
 
 
 /* =========================================================
-   SATIŞ FATURASI GÖRÜNTÜLE
+   FORM TEMİZLEME
 ========================================================= */
 
-async function viewSale(id) {
-
-  try {
-
-    const sale =
-      sales.find(
-        x =>
-          String(x.id) ===
-          String(id)
-      );
-
-
-    if (!sale) {
-      throw new Error(
-        "Fatura bulunamadı."
-      );
-    }
-
-
-    const result =
-      await db
-        .from("sale_items")
-        .select("*")
-        .eq(
-          "sale_id",
-          id
-        );
-
-
-    if (result.error) {
-      throw result.error;
-    }
-
-
-    const party =
-      parties.find(
-        x =>
-          String(x.id) ===
-          String(sale.party_id)
-      );
-
-
-    const rows =
-      (result.data || [])
-        .map((item, index) => {
-
-          const product =
-            products.find(
-              p =>
-                String(p.id) ===
-                String(item.product_id)
-            );
-
-
-          return `
-
-            <tr>
-
-              <td>
-                ${index + 1}
-              </td>
-
-              <td>
-                ${escapeHtml(
-                  product?.code || "-"
-                )}
-              </td>
-
-              <td>
-                ${escapeHtml(
-                  product?.name || "-"
-                )}
-              </td>
-
-              <td>
-                ${number(
-                  item.quantity
-                )}
-              </td>
-
-              <td>
-                ${money(
-                  item.unit_price
-                )}
-              </td>
-
-              <td>
-                %${number(
-                  item.vat_rate
-                )}
-              </td>
-
-              <td>
-                ${money(
-                  item.line_total
-                )}
-              </td>
-
-            </tr>
-
-          `;
-
-        })
-        .join("");
-
-
-    openModal(
-
-      "Satış Faturası",
-
-      `
-
-        <div class="report-row">
-
-          <span>
-            Fatura No
-          </span>
-
-          <strong>
-            ${escapeHtml(
-              sale.invoice_no || "-"
-            )}
-          </strong>
-
-        </div>
-
-
-        <div class="report-row">
-
-          <span>
-            Tarih
-          </span>
-
-          <strong>
-            ${sale.invoice_date || "-"}
-          </strong>
-
-        </div>
-
-
-        <div class="report-row">
-
-          <span>
-            Müşteri
-          </span>
-
-          <strong>
-            ${escapeHtml(
-              party?.name || "-"
-            )}
-          </strong>
-
-        </div>
-
-
-        <div style="overflow-x:auto;margin-top:20px;">
-
-          <table>
-
-            <thead>
-
-              <tr>
-
-                <th>#</th>
-                <th>Kod</th>
-                <th>Ürün</th>
-                <th>Miktar</th>
-                <th>Birim Fiyat</th>
-                <th>KDV</th>
-                <th>Toplam</th>
-
-              </tr>
-
-            </thead>
-
-            <tbody>
-              ${rows}
-            </tbody>
-
-          </table>
-
-        </div>
-
-
-        <div class="invoice-total">
-
-          <div>
-
-            <span>
-              Matrah
-            </span>
-
-            <strong>
-              ${money(
-                sale.subtotal
-              )}
-            </strong>
-
-          </div>
-
-
-          <div>
-
-            <span>
-              KDV
-            </span>
-
-            <strong>
-              ${money(
-                sale.vat_amount
-              )}
-            </strong>
-
-          </div>
-
-
-          <div class="grand-total">
-
-            <span>
-              Genel Toplam
-            </span>
-
-            <strong>
-              ${money(
-                sale.total
-              )}
-            </strong>
-
-          </div>
-
-        </div>
-
-
-        <div class="form-buttons">
-
-          <button
-            class="secondary"
-            onclick="closeModal()"
-          >
-            Kapat
-          </button>
-
-          <button
-            class="primary"
-            onclick="closeModal();editSale('${id}')"
-          >
-            Değiştir
-          </button>
-
-        </div>
-
-      `
-
+function clearPurchaseFields() {
+
+  const invoice =
+    document.getElementById(
+      "purchaseInvoiceNo"
     );
 
-  }
-
-  catch (error) {
-
-    console.error(error);
-
-    showToast(
-      "Fatura açılamadı: " +
-      error.message
+  const date =
+    document.getElementById(
+      "purchaseDate"
     );
 
+  const party =
+    document.getElementById(
+      "purchaseParty"
+    );
+
+  const note =
+    document.getElementById(
+      "purchaseNote"
+    );
+
+  const currency =
+    document.getElementById(
+      "purchaseCurrency"
+    );
+
+  const rate =
+    document.getElementById(
+      "purchaseExchangeRate"
+    );
+
+
+  if (invoice) {
+    invoice.value = "";
   }
+
+  if (date) {
+    date.value = today();
+  }
+
+  if (party) {
+    party.value = "";
+  }
+
+  if (note) {
+    note.value = "";
+  }
+
+  if (currency) {
+    currency.value = "TRY";
+  }
+
+  if (rate) {
+    rate.value = "1";
+  }
+
+
+  togglePurchaseCurrency();
+
+}
+
+
+function clearSaleFields() {
+
+  const invoice =
+    document.getElementById(
+      "saleInvoiceNo"
+    );
+
+  const date =
+    document.getElementById(
+      "saleDate"
+    );
+
+  const party =
+    document.getElementById(
+      "saleParty"
+    );
+
+  const note =
+    document.getElementById(
+      "saleNote"
+    );
+
+  const currency =
+    document.getElementById(
+      "saleCurrency"
+    );
+
+  const rate =
+    document.getElementById(
+      "saleExchangeRate"
+    );
+
+
+  if (invoice) {
+    invoice.value = "";
+  }
+
+  if (date) {
+    date.value = today();
+  }
+
+  if (party) {
+    party.value = "";
+  }
+
+  if (note) {
+    note.value = "";
+  }
+
+  if (currency) {
+    currency.value = "TRY";
+  }
+
+  if (rate) {
+    rate.value = "1";
+  }
+
+
+  toggleSaleCurrency();
+
+}
+
+
+function clearPurchase() {
+
+  editingPurchaseId = null;
+  purchaseItems = [];
+
+  clearPurchaseFields();
+
+  renderPurchaseItems();
+
+}
+
+
+function clearSale() {
+
+  editingSaleId = null;
+  saleItems = [];
+
+  clearSaleFields();
+
+  renderSaleItems();
 
 }
 
@@ -4847,7 +4234,9 @@ async function viewSale(id) {
 function renderMovements() {
 
   const container =
-    $("movementsTable");
+    document.getElementById(
+      "movementsTable"
+    );
 
   if (!container) return;
 
@@ -4899,7 +4288,6 @@ function renderMovements() {
             <tr>
 
               <td>
-
                 ${
                   m.created_at
                     ? new Date(
@@ -4909,7 +4297,6 @@ function renderMovements() {
                       )
                     : "-"
                 }
-
               </td>
 
               <td>
@@ -4982,11 +4369,9 @@ function openMovementForm() {
           ${products.map(p => `
 
             <option value="${p.id}">
-
               ${escapeHtml(p.code)}
               -
               ${escapeHtml(p.name)}
-
             </option>
 
           `).join("")}
@@ -5037,9 +4422,7 @@ function openMovementForm() {
 
         <label>Açıklama</label>
 
-        <textarea
-          id="movementNote"
-        ></textarea>
+        <textarea id="movementNote"></textarea>
 
       </div>
 
@@ -5048,6 +4431,7 @@ function openMovementForm() {
 
         <button
           class="secondary"
+          type="button"
           onclick="closeModal()"
         >
           Vazgeç
@@ -5055,6 +4439,7 @@ function openMovementForm() {
 
         <button
           class="success"
+          type="button"
           onclick="saveMovement()"
         >
           Kaydet
@@ -5072,18 +4457,28 @@ function openMovementForm() {
 async function saveMovement() {
 
   const productId =
-    $("movementProduct")?.value;
+    document
+      .getElementById("movementProduct")
+      ?.value;
+
 
   const type =
-    $("movementType")?.value;
+    document
+      .getElementById("movementType")
+      ?.value;
+
 
   const qty =
     number(
-      $("movementQty")?.value
+      document
+        .getElementById("movementQty")
+        ?.value
     );
 
+
   const note =
-    $("movementNote")
+    document
+      .getElementById("movementNote")
       ?.value
       .trim() || "";
 
@@ -5124,18 +4519,16 @@ async function saveMovement() {
   if (type === "in") {
 
     newStock =
-      number(
-        product.stock_quantity
-      ) + qty;
+      number(product.stock_quantity) +
+      qty;
 
   }
 
   else {
 
     newStock =
-      number(
-        product.stock_quantity
-      ) - qty;
+      number(product.stock_quantity) -
+      qty;
 
 
     if (newStock < 0) {
@@ -5153,12 +4546,11 @@ async function saveMovement() {
 
   try {
 
-    const update =
+    const updateResult =
       await db
         .from("products")
         .update({
-          stock_quantity:
-            newStock
+          stock_quantity: newStock
         })
         .eq(
           "id",
@@ -5166,12 +4558,12 @@ async function saveMovement() {
         );
 
 
-    if (update.error) {
-      throw update.error;
+    if (updateResult.error) {
+      throw updateResult.error;
     }
 
 
-    const movement =
+    const movementResult =
       await db
         .from("stock_movements")
         .insert({
@@ -5192,8 +4584,8 @@ async function saveMovement() {
         });
 
 
-    if (movement.error) {
-      throw movement.error;
+    if (movementResult.error) {
+      throw movementResult.error;
     }
 
 
@@ -5265,7 +4657,9 @@ function renderReports() {
 
 
   const container =
-    $("reportSummary");
+    document.getElementById(
+      "reportSummary"
+    );
 
   if (!container) return;
 
@@ -5394,7 +4788,184 @@ function renderReports() {
 
 
 /* =========================================================
-   ESKİ FATURALAR SAYFASI İÇİN GÜVENLİK
+   CSV
+========================================================= */
+
+function downloadCSV(
+  filename,
+  rows
+) {
+
+  const csv =
+    rows
+      .map(row =>
+        row.map(value => {
+
+          const text =
+            String(value ?? "");
+
+          return `"${text.replaceAll(
+            '"',
+            '""'
+          )}"`;
+
+        }).join(";")
+      )
+      .join("\n");
+
+
+  const blob =
+    new Blob(
+      ["\uFEFF" + csv],
+      {
+        type:
+          "text/csv;charset=utf-8;"
+      }
+    );
+
+
+  const url =
+    URL.createObjectURL(blob);
+
+
+  const link =
+    document.createElement("a");
+
+
+  link.href = url;
+  link.download = filename;
+
+  document.body.appendChild(link);
+
+  link.click();
+
+  link.remove();
+
+  URL.revokeObjectURL(url);
+
+}
+
+
+function exportPurchasesCSV() {
+
+  const rows = [
+
+    [
+      "Fatura No",
+      "Tarih",
+      "Tedarikçi",
+      "Para Birimi",
+      "Kur",
+      "Matrah",
+      "KDV",
+      "Genel Toplam"
+    ]
+
+  ];
+
+
+  purchases.forEach(p => {
+
+    const party =
+      parties.find(
+        x =>
+          String(x.id) ===
+          String(p.party_id)
+      );
+
+
+    rows.push([
+
+      p.invoice_no || "",
+
+      p.invoice_date || "",
+
+      party?.name || "",
+
+      p.currency || "TRY",
+
+      p.exchange_rate || 1,
+
+      p.subtotal || 0,
+
+      p.vat_amount || 0,
+
+      p.total || 0
+
+    ]);
+
+  });
+
+
+  downloadCSV(
+    "alis_faturalari.csv",
+    rows
+  );
+
+}
+
+
+function exportSalesCSV() {
+
+  const rows = [
+
+    [
+      "Fatura No",
+      "Tarih",
+      "Müşteri",
+      "Para Birimi",
+      "Kur",
+      "Matrah",
+      "KDV",
+      "Genel Toplam"
+    ]
+
+  ];
+
+
+  sales.forEach(s => {
+
+    const party =
+      parties.find(
+        x =>
+          String(x.id) ===
+          String(s.party_id)
+      );
+
+
+    rows.push([
+
+      s.invoice_no || "",
+
+      s.invoice_date || "",
+
+      party?.name || "",
+
+      s.currency || "TRY",
+
+      s.exchange_rate || 1,
+
+      s.subtotal || 0,
+
+      s.vat_amount || 0,
+
+      s.total || 0
+
+    ]);
+
+  });
+
+
+  downloadCSV(
+    "satis_faturalari.csv",
+    rows
+  );
+
+}
+
+
+/* =========================================================
+   ESKİ FONKSİYON UYUMLULUĞU
 ========================================================= */
 
 function renderDocuments() {
@@ -5411,7 +4982,7 @@ document.addEventListener(
   event => {
 
     const modal =
-      $("modal");
+      document.getElementById("modal");
 
 
     if (
@@ -5431,1820 +5002,11 @@ document.addEventListener(
   "keydown",
   event => {
 
-    if (
-      event.key === "Escape"
-    ) {
+    if (event.key === "Escape") {
 
       closeModal();
 
     }
-
-  }
-);
-
-/* =========================================================
-   YENİ FATURA SİSTEMİ
-   TL / USD + KUR + FORM GİZLE/GÖSTER
-========================================================= */
-
-let editingPurchaseId = null;
-let editingSaleId = null;
-
-
-/* ---------------------------------------------------------
-   PARA BİRİMİ
---------------------------------------------------------- */
-
-function invoiceMoney(value, currency = "TRY") {
-
-  const symbol =
-    currency === "USD"
-      ? "$"
-      : "₺";
-
-  return Number(value || 0).toLocaleString("tr-TR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }) + " " + symbol;
-
-}
-
-
-/* ---------------------------------------------------------
-   FATURA FORMUNU GİZLE
---------------------------------------------------------- */
-
-function hideInvoiceForms() {
-
-  const purchaseForm =
-    document.getElementById("purchaseInvoiceForm");
-
-  const saleForm =
-    document.getElementById("saleInvoiceForm");
-
-  if (purchaseForm) {
-    purchaseForm.style.display = "none";
-  }
-
-  if (saleForm) {
-    saleForm.style.display = "none";
-  }
-
-}
-
-
-/* ---------------------------------------------------------
-   SATIN ALMA FORMUNU AÇ
---------------------------------------------------------- */
-
-function showPurchaseInvoiceForm() {
-
-  const form =
-    document.getElementById("purchaseInvoiceForm");
-
-  if (!form) {
-
-    showToast(
-      "Satın alma fatura formu bulunamadı."
-    );
-
-    return;
-
-  }
-
-  editingPurchaseId = null;
-
-  form.style.display = "block";
-
-  purchaseItems = [];
-
-  renderPurchaseItems();
-
-  setDefaultDates();
-
-  const currency =
-    document.getElementById("purchaseCurrency");
-
-  const rate =
-    document.getElementById("purchaseExchangeRate");
-
-  if (currency) {
-    currency.value = "TRY";
-  }
-
-  if (rate) {
-    rate.value = "";
-  }
-
-  updatePurchaseCurrencyUI();
-
-}
-
-
-/* ---------------------------------------------------------
-   SATIN ALMA FORMUNU KAPAT
---------------------------------------------------------- */
-
-function hidePurchaseInvoiceForm() {
-
-  const form =
-    document.getElementById("purchaseInvoiceForm");
-
-  if (form) {
-    form.style.display = "none";
-  }
-
-  editingPurchaseId = null;
-
-  purchaseItems = [];
-
-}
-
-
-/* ---------------------------------------------------------
-   SATIŞ FORMUNU AÇ
---------------------------------------------------------- */
-
-function showSaleInvoiceForm() {
-
-  const form =
-    document.getElementById("saleInvoiceForm");
-
-  if (!form) {
-
-    showToast(
-      "Satış fatura formu bulunamadı."
-    );
-
-    return;
-
-  }
-
-  editingSaleId = null;
-
-  form.style.display = "block";
-
-  saleItems = [];
-
-  renderSaleItems();
-
-  setDefaultDates();
-
-  const currency =
-    document.getElementById("saleCurrency");
-
-  const rate =
-    document.getElementById("saleExchangeRate");
-
-  if (currency) {
-    currency.value = "TRY";
-  }
-
-  if (rate) {
-    rate.value = "";
-  }
-
-  updateSaleCurrencyUI();
-
-}
-
-
-/* ---------------------------------------------------------
-   SATIŞ FORMUNU KAPAT
---------------------------------------------------------- */
-
-function hideSaleInvoiceForm() {
-
-  const form =
-    document.getElementById("saleInvoiceForm");
-
-  if (form) {
-    form.style.display = "none";
-  }
-
-  editingSaleId = null;
-
-  saleItems = [];
-
-}
-
-
-/* ---------------------------------------------------------
-   ALIŞ PARA BİRİMİ UI
---------------------------------------------------------- */
-
-function updatePurchaseCurrencyUI() {
-
-  const currency =
-    document.getElementById("purchaseCurrency");
-
-  const rateGroup =
-    document.getElementById(
-      "purchaseExchangeRateGroup"
-    );
-
-  const rate =
-    document.getElementById(
-      "purchaseExchangeRate"
-    );
-
-  if (!currency) return;
-
-  if (currency.value === "USD") {
-
-    if (rateGroup) {
-      rateGroup.style.display = "block";
-    }
-
-    if (rate) {
-      rate.required = true;
-    }
-
-  }
-
-  else {
-
-    if (rateGroup) {
-      rateGroup.style.display = "none";
-    }
-
-    if (rate) {
-      rate.required = false;
-      rate.value = "";
-    }
-
-  }
-
-  renderPurchaseItems();
-
-}
-
-
-/* ---------------------------------------------------------
-   SATIŞ PARA BİRİMİ UI
---------------------------------------------------------- */
-
-function updateSaleCurrencyUI() {
-
-  const currency =
-    document.getElementById("saleCurrency");
-
-  const rateGroup =
-    document.getElementById(
-      "saleExchangeRateGroup"
-    );
-
-  const rate =
-    document.getElementById(
-      "saleExchangeRate"
-    );
-
-  if (!currency) return;
-
-  if (currency.value === "USD") {
-
-    if (rateGroup) {
-      rateGroup.style.display = "block";
-    }
-
-    if (rate) {
-      rate.required = true;
-    }
-
-  }
-
-  else {
-
-    if (rateGroup) {
-      rateGroup.style.display = "none";
-    }
-
-    if (rate) {
-      rate.required = false;
-      rate.value = "";
-    }
-
-  }
-
-  renderSaleItems();
-
-}
-
-
-/* ---------------------------------------------------------
-   ALIŞ FATURA LİSTESİ
---------------------------------------------------------- */
-
-function renderPurchaseInvoiceList() {
-
-  const container =
-    document.getElementById(
-      "purchaseInvoiceList"
-    );
-
-  if (!container) return;
-
-  if (!purchases.length) {
-
-    container.innerHTML = `
-      <div class="empty">
-        Henüz alış faturası kaydedilmedi.
-      </div>
-    `;
-
-    return;
-
-  }
-
-  container.innerHTML = `
-
-    <table>
-
-      <thead>
-
-        <tr>
-
-          <th>Fatura No</th>
-          <th>Tarih</th>
-          <th>Tedarikçi</th>
-          <th>Para Birimi</th>
-          <th>Kur</th>
-          <th>Toplam</th>
-          <th>İşlem</th>
-
-        </tr>
-
-      </thead>
-
-      <tbody>
-
-        ${purchases.map(p => {
-
-          const party =
-            parties.find(
-              x =>
-                String(x.id) ===
-                String(p.party_id)
-            );
-
-          const currency =
-            p.currency || "TRY";
-
-          const rate =
-            Number(p.exchange_rate || 1);
-
-          return `
-
-            <tr>
-
-              <td>
-                ${escapeHtml(
-                  p.invoice_no || "-"
-                )}
-              </td>
-
-              <td>
-                ${p.invoice_date || "-"}
-              </td>
-
-              <td>
-                ${escapeHtml(
-                  party?.name || "-"
-                )}
-              </td>
-
-              <td>
-                <strong>
-                  ${currency === "USD"
-                    ? "USD"
-                    : "TL"}
-                </strong>
-              </td>
-
-              <td>
-                ${
-                  currency === "USD"
-                    ? Number(rate).toLocaleString(
-                        "tr-TR",
-                        {
-                          minimumFractionDigits: 4,
-                          maximumFractionDigits: 4
-                        }
-                      )
-                    : "-"
-                }
-              </td>
-
-              <td>
-                <strong>
-                  ${invoiceMoney(
-                    p.total,
-                    currency
-                  )}
-                </strong>
-              </td>
-
-              <td>
-
-                <button
-                  class="secondary"
-                  onclick="editPurchaseInvoice('${p.id}')"
-                >
-                  Düzenle
-                </button>
-
-              </td>
-
-            </tr>
-
-          `;
-
-        }).join("")}
-
-      </tbody>
-
-    </table>
-
-  `;
-
-}
-
-
-/* ---------------------------------------------------------
-   SATIŞ FATURA LİSTESİ
---------------------------------------------------------- */
-
-function renderSaleInvoiceList() {
-
-  const container =
-    document.getElementById(
-      "saleInvoiceList"
-    );
-
-  if (!container) return;
-
-  if (!sales.length) {
-
-    container.innerHTML = `
-      <div class="empty">
-        Henüz satış faturası kaydedilmedi.
-      </div>
-    `;
-
-    return;
-
-  }
-
-  container.innerHTML = `
-
-    <table>
-
-      <thead>
-
-        <tr>
-
-          <th>Fatura No</th>
-          <th>Tarih</th>
-          <th>Müşteri</th>
-          <th>Para Birimi</th>
-          <th>Kur</th>
-          <th>Toplam</th>
-          <th>İşlem</th>
-
-        </tr>
-
-      </thead>
-
-      <tbody>
-
-        ${sales.map(s => {
-
-          const party =
-            parties.find(
-              x =>
-                String(x.id) ===
-                String(s.party_id)
-            );
-
-          const currency =
-            s.currency || "TRY";
-
-          const rate =
-            Number(s.exchange_rate || 1);
-
-          return `
-
-            <tr>
-
-              <td>
-                ${escapeHtml(
-                  s.invoice_no || "-"
-                )}
-              </td>
-
-              <td>
-                ${s.invoice_date || "-"}
-              </td>
-
-              <td>
-                ${escapeHtml(
-                  party?.name || "-"
-                )}
-              </td>
-
-              <td>
-                <strong>
-                  ${currency === "USD"
-                    ? "USD"
-                    : "TL"}
-                </strong>
-              </td>
-
-              <td>
-                ${
-                  currency === "USD"
-                    ? Number(rate).toLocaleString(
-                        "tr-TR",
-                        {
-                          minimumFractionDigits: 4,
-                          maximumFractionDigits: 4
-                        }
-                      )
-                    : "-"
-                }
-              </td>
-
-              <td>
-                <strong>
-                  ${invoiceMoney(
-                    s.total,
-                    currency
-                  )}
-                </strong>
-              </td>
-
-              <td>
-
-                <button
-                  class="secondary"
-                  onclick="editSaleInvoice('${s.id}')"
-                >
-                  Düzenle
-                </button>
-
-              </td>
-
-            </tr>
-
-          `;
-
-        }).join("")}
-
-      </tbody>
-
-    </table>
-
-  `;
-
-}
-
-
-/* ---------------------------------------------------------
-   ALIŞ KALEMLERİNİ PARA BİRİMİNE GÖRE GÖSTER
---------------------------------------------------------- */
-
-const oldRenderPurchaseItems =
-  window.renderPurchaseItems;
-
-window.renderPurchaseItems =
-  function () {
-
-    if (
-      typeof oldRenderPurchaseItems ===
-      "function"
-    ) {
-      oldRenderPurchaseItems();
-    }
-
-    const currency =
-      document.getElementById(
-        "purchaseCurrency"
-      )?.value || "TRY";
-
-    const table =
-      document.querySelector(
-        "#purchaseItems .invoice-items-table"
-      );
-
-    if (!table) return;
-
-    table
-      .querySelectorAll("tbody tr")
-      .forEach(row => {
-
-        const cells =
-          row.querySelectorAll("td");
-
-        if (cells.length >= 8) {
-
-          const unitPrice =
-            cells[3];
-
-          const subtotal =
-            cells[5];
-
-          const vat =
-            cells[6];
-
-          const total =
-            cells[7];
-
-          [
-            unitPrice,
-            subtotal,
-            vat,
-            total
-          ].forEach(cell => {
-
-            if (!cell) return;
-
-            const text =
-              cell.textContent
-                .replace(/[₺$]/g, "")
-                .trim();
-
-            const value =
-              Number(
-                text
-                  .replace(/\./g, "")
-                  .replace(",", ".")
-              );
-
-            if (!Number.isNaN(value)) {
-
-              cell.textContent =
-                invoiceMoney(
-                  value,
-                  currency
-                );
-
-            }
-
-          });
-
-        }
-
-      });
-
-  };
-
-
-/* ---------------------------------------------------------
-   SATIŞ KALEMLERİNİ PARA BİRİMİNE GÖRE GÖSTER
---------------------------------------------------------- */
-
-const oldRenderSaleItems =
-  window.renderSaleItems;
-
-window.renderSaleItems =
-  function () {
-
-    if (
-      typeof oldRenderSaleItems ===
-      "function"
-    ) {
-      oldRenderSaleItems();
-    }
-
-    const currency =
-      document.getElementById(
-        "saleCurrency"
-      )?.value || "TRY";
-
-    const table =
-      document.querySelector(
-        "#saleItems .invoice-items-table"
-      );
-
-    if (!table) return;
-
-    table
-      .querySelectorAll("tbody tr")
-      .forEach(row => {
-
-        const cells =
-          row.querySelectorAll("td");
-
-        if (cells.length >= 8) {
-
-          [
-            cells[3],
-            cells[5],
-            cells[6],
-            cells[7]
-          ].forEach(cell => {
-
-            if (!cell) return;
-
-            const text =
-              cell.textContent
-                .replace(/[₺$]/g, "")
-                .trim();
-
-            const value =
-              Number(
-                text
-                  .replace(/\./g, "")
-                  .replace(",", ".")
-              );
-
-            if (!Number.isNaN(value)) {
-
-              cell.textContent =
-                invoiceMoney(
-                  value,
-                  currency
-                );
-
-            }
-
-          });
-
-        }
-
-      });
-
-  };
-
-
-/* ---------------------------------------------------------
-   ALIŞ FORMUNA PARA BİRİMİ ALANI EKLE
---------------------------------------------------------- */
-
-function addPurchaseCurrencyFields() {
-
-  const invoiceNo =
-    document.getElementById(
-      "purchaseInvoiceNo"
-    );
-
-  if (!invoiceNo) return;
-
-  if (
-    document.getElementById(
-      "purchaseCurrency"
-    )
-  ) return;
-
-  const wrapper =
-    invoiceNo.closest(
-      ".form-group"
-    )?.parentElement;
-
-  if (!wrapper) return;
-
-  const html = `
-
-    <div class="form-group">
-
-      <label>Para Birimi</label>
-
-      <select
-        id="purchaseCurrency"
-        onchange="updatePurchaseCurrencyUI()"
-      >
-
-        <option value="TRY">
-          TL
-        </option>
-
-        <option value="USD">
-          USD
-        </option>
-
-      </select>
-
-    </div>
-
-    <div
-      class="form-group"
-      id="purchaseExchangeRateGroup"
-      style="display:none"
-    >
-
-      <label>Fatura Kuru</label>
-
-      <input
-        id="purchaseExchangeRate"
-        type="number"
-        min="0.0001"
-        step="0.0001"
-        placeholder="Örn: 40.2500"
-      >
-
-      <small>
-        1 USD = kaç TL?
-      </small>
-
-    </div>
-
-  `;
-
-  wrapper.insertAdjacentHTML(
-    "beforeend",
-    html
-  );
-
-}
-
-
-/* ---------------------------------------------------------
-   SATIŞ FORMUNA PARA BİRİMİ ALANI EKLE
---------------------------------------------------------- */
-
-function addSaleCurrencyFields() {
-
-  const invoiceNo =
-    document.getElementById(
-      "saleInvoiceNo"
-    );
-
-  if (!invoiceNo) return;
-
-  if (
-    document.getElementById(
-      "saleCurrency"
-    )
-  ) return;
-
-  const wrapper =
-    invoiceNo.closest(
-      ".form-group"
-    )?.parentElement;
-
-  if (!wrapper) return;
-
-  const html = `
-
-    <div class="form-group">
-
-      <label>Para Birimi</label>
-
-      <select
-        id="saleCurrency"
-        onchange="updateSaleCurrencyUI()"
-      >
-
-        <option value="TRY">
-          TL
-        </option>
-
-        <option value="USD">
-          USD
-        </option>
-
-      </select>
-
-    </div>
-
-    <div
-      class="form-group"
-      id="saleExchangeRateGroup"
-      style="display:none"
-    >
-
-      <label>Fatura Kuru</label>
-
-      <input
-        id="saleExchangeRate"
-        type="number"
-        min="0.0001"
-        step="0.0001"
-        placeholder="Örn: 40.2500"
-      >
-
-      <small>
-        1 USD = kaç TL?
-      </small>
-
-    </div>
-
-  `;
-
-  wrapper.insertAdjacentHTML(
-    "beforeend",
-    html
-  );
-
-}
-
-
-/* ---------------------------------------------------------
-   SAYFA AÇILINCA FORMU GİZLE
---------------------------------------------------------- */
-
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
-
-    setTimeout(() => {
-
-      hideInvoiceForms();
-
-      addPurchaseCurrencyFields();
-      addSaleCurrencyFields();
-
-      renderPurchaseInvoiceList();
-      renderSaleInvoiceList();
-
-    }, 300);
-
-  }
-);
-
-
-/* ---------------------------------------------------------
-   NAVİGASYONDA ALIŞ
---------------------------------------------------------- */
-
-const originalPreparePurchasePage =
-  window.preparePurchasePage;
-
-window.preparePurchasePage =
-  function () {
-
-    if (
-      typeof originalPreparePurchasePage ===
-      "function"
-    ) {
-      originalPreparePurchasePage();
-    }
-
-    addPurchaseCurrencyFields();
-
-    renderPurchaseInvoiceList();
-
-    hideInvoiceForms();
-
-  };
-
-
-/* ---------------------------------------------------------
-   NAVİGASYONDA SATIŞ
---------------------------------------------------------- */
-
-const originalPrepareSalePage =
-  window.prepareSalePage;
-
-window.prepareSalePage =
-  function () {
-
-    if (
-      typeof originalPrepareSalePage ===
-      "function"
-    ) {
-      originalPrepareSalePage();
-    }
-
-    addSaleCurrencyFields();
-
-    renderSaleInvoiceList();
-
-    hideInvoiceForms();
-
-  };
-
-
-/* ---------------------------------------------------------
-   YÜKLEME SONRASI LİSTELERİ YENİLE
---------------------------------------------------------- */
-
-const originalLoadAll =
-  window.loadAll;
-
-window.loadAll =
-  async function () {
-
-    if (
-      typeof originalLoadAll ===
-      "function"
-    ) {
-      await originalLoadAll();
-    }
-
-    renderPurchaseInvoiceList();
-    renderSaleInvoiceList();
-
-  };
-
-
-/* ---------------------------------------------------------
-   ALIŞ KAYDETMEDE PARA BİRİMİ
---------------------------------------------------------- */
-
-const originalSavePurchase =
-  window.savePurchase;
-
-window.savePurchase =
-  async function () {
-
-    const currency =
-      document.getElementById(
-        "purchaseCurrency"
-      )?.value || "TRY";
-
-    const exchangeRate =
-      currency === "USD"
-        ? number(
-            document.getElementById(
-              "purchaseExchangeRate"
-            )?.value
-          )
-        : 1;
-
-    if (
-      currency === "USD" &&
-      exchangeRate <= 0
-    ) {
-
-      showToast(
-        "USD faturada fatura kuru girin."
-      );
-
-      return;
-
-    }
-
-    const oldInsert =
-      db.from.bind(db);
-
-    /*
-      Orijinal savePurchase fonksiyonu
-      çalışmadan önce para birimini
-      geçici olarak saklıyoruz.
-    */
-
-    window.__purchaseCurrency =
-      currency;
-
-    window.__purchaseExchangeRate =
-      exchangeRate;
-
-    await originalSavePurchase();
-
-  };
-
-
-/* ---------------------------------------------------------
-   SATIŞ KAYDETMEDE PARA BİRİMİ
---------------------------------------------------------- */
-
-const originalSaveSale =
-  window.saveSale;
-
-window.saveSale =
-  async function () {
-
-    const currency =
-      document.getElementById(
-        "saleCurrency"
-      )?.value || "TRY";
-
-    const exchangeRate =
-      currency === "USD"
-        ? number(
-            document.getElementById(
-              "saleExchangeRate"
-            )?.value
-          )
-        : 1;
-
-    if (
-      currency === "USD" &&
-      exchangeRate <= 0
-    ) {
-
-      showToast(
-        "USD faturada fatura kuru girin."
-      );
-
-      return;
-
-    }
-
-    window.__saleCurrency =
-      currency;
-
-    window.__saleExchangeRate =
-      exchangeRate;
-
-    await originalSaveSale();
-
-  };
-
-
-/* =========================================================
-   NOT:
-   Aşağıdaki iki fonksiyon kayıt sırasında
-   currency/exchange_rate alanlarını kullanır.
-========================================================= */
-
-
-/* ---------------------------------------------------------
-   ALIŞ KAYDINI DOĞRUDAN YENİDEN YAP
---------------------------------------------------------- */
-
-async function savePurchaseWithCurrency() {
-
-  if (!purchaseItems.length) {
-
-    showToast(
-      "Faturaya en az bir ürün ekleyin."
-    );
-
-    return;
-
-  }
-
-  const partyId =
-    document.getElementById(
-      "purchaseParty"
-    )?.value || null;
-
-  const invoiceNo =
-    document.getElementById(
-      "purchaseInvoiceNo"
-    )?.value
-    .trim() || "";
-
-  const invoiceDate =
-    document.getElementById(
-      "purchaseDate"
-    )?.value || today();
-
-  const note =
-    document.getElementById(
-      "purchaseNote"
-    )?.value
-    .trim() || "";
-
-  const currency =
-    document.getElementById(
-      "purchaseCurrency"
-    )?.value || "TRY";
-
-  const exchangeRate =
-    currency === "USD"
-      ? number(
-          document.getElementById(
-            "purchaseExchangeRate"
-          )?.value
-        )
-      : 1;
-
-  if (
-    currency === "USD" &&
-    exchangeRate <= 0
-  ) {
-
-    showToast(
-      "USD faturada kur girmeniz gerekiyor."
-    );
-
-    return;
-
-  }
-
-  const totals =
-    calculatePurchaseTotals();
-
-  try {
-
-    const result =
-      await db
-        .from("purchases")
-        .insert({
-
-          invoice_no:
-            invoiceNo,
-
-          party_id:
-            partyId,
-
-          invoice_date:
-            invoiceDate,
-
-          subtotal:
-            totals.subtotal,
-
-          vat_rate:
-            0,
-
-          vat_amount:
-            totals.vatTotal,
-
-          total:
-            totals.total,
-
-          note,
-
-          currency,
-
-          exchange_rate:
-            exchangeRate
-
-        })
-        .select()
-        .single();
-
-    if (result.error) {
-      throw result.error;
-    }
-
-    const purchaseId =
-      result.data.id;
-
-    const items =
-      purchaseItems.map(item => {
-
-        const subtotal =
-          item.quantity *
-          item.unit_price;
-
-        const vatAmount =
-          subtotal *
-          item.vat_rate /
-          100;
-
-        return {
-
-          purchase_id:
-            purchaseId,
-
-          product_id:
-            item.product_id,
-
-          quantity:
-            item.quantity,
-
-          unit_price:
-            item.unit_price,
-
-          vat_rate:
-            item.vat_rate,
-
-          line_subtotal:
-            subtotal,
-
-          vat_amount:
-            vatAmount,
-
-          line_total:
-            subtotal + vatAmount
-
-        };
-
-      });
-
-    const itemResult =
-      await db
-        .from("purchase_items")
-        .insert(items);
-
-    if (itemResult.error) {
-      throw itemResult.error;
-    }
-
-    for (const item of purchaseItems) {
-
-      const product =
-        products.find(
-          p =>
-            String(p.id) ===
-            String(item.product_id)
-        );
-
-      if (!product) continue;
-
-      const newStock =
-        number(product.stock_quantity) +
-        number(item.quantity);
-
-      const update =
-        await db
-          .from("products")
-          .update({
-
-            stock_quantity:
-              newStock,
-
-            purchase_price:
-              item.unit_price
-
-          })
-          .eq(
-            "id",
-            item.product_id
-          );
-
-      if (update.error) {
-        throw update.error;
-      }
-
-      const movement =
-        await db
-          .from("stock_movements")
-          .insert({
-
-            product_id:
-              item.product_id,
-
-            party_id:
-              partyId,
-
-            type:
-              "in",
-
-            quantity:
-              item.quantity,
-
-            source_type:
-              "purchase",
-
-            source_id:
-              purchaseId,
-
-            note:
-              `Alış faturası ${invoiceNo}`
-
-          });
-
-      if (movement.error) {
-        throw movement.error;
-      }
-
-    }
-
-    showToast(
-      "Alış faturası kaydedildi."
-    );
-
-    hidePurchaseInvoiceForm();
-
-    await loadAll();
-
-  }
-
-  catch (error) {
-
-    console.error(error);
-
-    showToast(
-      "Alış faturası kaydedilemedi: " +
-      error.message
-    );
-
-  }
-
-}
-
-
-/* ---------------------------------------------------------
-   SATIŞ KAYDINI PARA BİRİMİYLE YAP
---------------------------------------------------------- */
-
-async function saveSaleWithCurrency() {
-
-  if (!saleItems.length) {
-
-    showToast(
-      "Faturaya en az bir ürün ekleyin."
-    );
-
-    return;
-
-  }
-
-  const partyId =
-    document.getElementById(
-      "saleParty"
-    )?.value || null;
-
-  const invoiceNo =
-    document.getElementById(
-      "saleInvoiceNo"
-    )?.value
-    .trim() || "";
-
-  const invoiceDate =
-    document.getElementById(
-      "saleDate"
-    )?.value || today();
-
-  const note =
-    document.getElementById(
-      "saleNote"
-    )?.value
-    .trim() || "";
-
-  const currency =
-    document.getElementById(
-      "saleCurrency"
-    )?.value || "TRY";
-
-  const exchangeRate =
-    currency === "USD"
-      ? number(
-          document.getElementById(
-            "saleExchangeRate"
-          )?.value
-        )
-      : 1;
-
-  if (
-    currency === "USD" &&
-    exchangeRate <= 0
-  ) {
-
-    showToast(
-      "USD faturada kur girmeniz gerekiyor."
-    );
-
-    return;
-
-  }
-
-  const totals =
-    calculateSaleTotals();
-
-  try {
-
-    const result =
-      await db
-        .from("sales")
-        .insert({
-
-          invoice_no:
-            invoiceNo,
-
-          party_id:
-            partyId,
-
-          invoice_date:
-            invoiceDate,
-
-          subtotal:
-            totals.subtotal,
-
-          vat_rate:
-            0,
-
-          vat_amount:
-            totals.vatTotal,
-
-          total:
-            totals.total,
-
-          note,
-
-          currency,
-
-          exchange_rate:
-            exchangeRate
-
-        })
-        .select()
-        .single();
-
-    if (result.error) {
-      throw result.error;
-    }
-
-    const saleId =
-      result.data.id;
-
-    const items =
-      saleItems.map(item => {
-
-        const subtotal =
-          item.quantity *
-          item.unit_price;
-
-        const vatAmount =
-          subtotal *
-          item.vat_rate /
-          100;
-
-        return {
-
-          sale_id:
-            saleId,
-
-          product_id:
-            item.product_id,
-
-          quantity:
-            item.quantity,
-
-          unit_price:
-            item.unit_price,
-
-          vat_rate:
-            item.vat_rate,
-
-          line_subtotal:
-            subtotal,
-
-          vat_amount:
-            vatAmount,
-
-          line_total:
-            subtotal + vatAmount
-
-        };
-
-      });
-
-    const itemResult =
-      await db
-        .from("sale_items")
-        .insert(items);
-
-    if (itemResult.error) {
-      throw itemResult.error;
-    }
-
-    for (const item of saleItems) {
-
-      const product =
-        products.find(
-          p =>
-            String(p.id) ===
-            String(item.product_id)
-        );
-
-      if (!product) continue;
-
-      const newStock =
-        number(product.stock_quantity) -
-        number(item.quantity);
-
-      if (newStock < 0) {
-
-        throw new Error(
-          `${product.name} için stok yetersiz.`
-        );
-
-      }
-
-      const update =
-        await db
-          .from("products")
-          .update({
-
-            stock_quantity:
-              newStock,
-
-            sale_price:
-              item.unit_price
-
-          })
-          .eq(
-            "id",
-            item.product_id
-          );
-
-      if (update.error) {
-        throw update.error;
-      }
-
-      const movement =
-        await db
-          .from("stock_movements")
-          .insert({
-
-            product_id:
-              item.product_id,
-
-            party_id:
-              partyId,
-
-            type:
-              "out",
-
-            quantity:
-              item.quantity,
-
-            source_type:
-              "sale",
-
-            source_id:
-              saleId,
-
-            note:
-              `Satış faturası ${invoiceNo}`
-
-          });
-
-      if (movement.error) {
-        throw movement.error;
-      }
-
-    }
-
-    showToast(
-      "Satış faturası kaydedildi."
-    );
-
-    hideSaleInvoiceForm();
-
-    await loadAll();
-
-  }
-
-  catch (error) {
-
-    console.error(error);
-
-    showToast(
-      "Satış faturası kaydedilemedi: " +
-      error.message
-    );
-
-  }
-
-}
-
-
-/* ---------------------------------------------------------
-   BUTONLARI OTOMATİK EKLE
---------------------------------------------------------- */
-
-function addInvoiceButtons() {
-
-  const purchasePage =
-    document.getElementById("purchase");
-
-  if (
-    purchasePage &&
-    !document.getElementById(
-      "newPurchaseInvoiceBtn"
-    )
-  ) {
-
-    const button =
-      document.createElement("button");
-
-    button.id =
-      "newPurchaseInvoiceBtn";
-
-    button.className =
-      "primary big";
-
-    button.textContent =
-      "+ Fatura Ekle";
-
-    button.onclick =
-      showPurchaseInvoiceForm;
-
-    const header =
-      purchasePage.querySelector(
-        ".panel-header"
-      );
-
-    if (header) {
-      header.appendChild(button);
-    }
-
-  }
-
-
-  const salePage =
-    document.getElementById("sales");
-
-  if (
-    salePage &&
-    !document.getElementById(
-      "newSaleInvoiceBtn"
-    )
-  ) {
-
-    const button =
-      document.createElement("button");
-
-    button.id =
-      "newSaleInvoiceBtn";
-
-    button.className =
-      "primary big";
-
-    button.textContent =
-      "+ Fatura Ekle";
-
-    button.onclick =
-      showSaleInvoiceForm;
-
-    const header =
-      salePage.querySelector(
-        ".panel-header"
-      );
-
-    if (header) {
-      header.appendChild(button);
-    }
-
-  }
-
-}
-
-
-/* ---------------------------------------------------------
-   FORM VE LİSTELERİ AYIR
---------------------------------------------------------- */
-
-function createInvoiceContainers() {
-
-  const purchase =
-    document.getElementById("purchase");
-
-  if (purchase) {
-
-    let list =
-      document.getElementById(
-        "purchaseInvoiceList"
-      );
-
-    if (!list) {
-
-      list =
-        document.createElement("div");
-
-      list.id =
-        "purchaseInvoiceList";
-
-      list.className =
-        "panel";
-
-      purchase.appendChild(list);
-
-    }
-
-  }
-
-
-  const sale =
-    document.getElementById("sales");
-
-  if (sale) {
-
-    let list =
-      document.getElementById(
-        "saleInvoiceList"
-      );
-
-    if (!list) {
-
-      list =
-        document.createElement("div");
-
-      list.id =
-        "saleInvoiceList";
-
-      list.className =
-        "panel";
-
-      sale.appendChild(list);
-
-    }
-
-  }
-
-}
-
-
-/* ---------------------------------------------------------
-   BAŞLANGIÇ
---------------------------------------------------------- */
-
-document.addEventListener(
-  "DOMContentLoaded",
-  () => {
-
-    setTimeout(() => {
-
-      createInvoiceContainers();
-
-      addInvoiceButtons();
-
-      hideInvoiceForms();
-
-      addPurchaseCurrencyFields();
-      addSaleCurrencyFields();
-
-      renderPurchaseInvoiceList();
-      renderSaleInvoiceList();
-
-    }, 500);
 
   }
 );

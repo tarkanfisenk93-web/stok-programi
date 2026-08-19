@@ -161,6 +161,43 @@
 
         </div>
 
+        <div class="table-filter-bar product-filter-bar">
+
+          <input
+            id="productMinStock"
+            type="number"
+            step="0.01"
+            placeholder="En az stok"
+            oninput="renderProducts()"
+          >
+
+          <input
+            id="productMaxStock"
+            type="number"
+            step="0.01"
+            placeholder="En fazla stok"
+            oninput="renderProducts()"
+          >
+
+          <select
+            id="productStatusFilter"
+            onchange="renderProducts()"
+          >
+            <option value="all">Tüm stok durumları</option>
+            <option value="normal">Normal stok</option>
+            <option value="critical">Kritik stok</option>
+          </select>
+
+          <button
+            class="secondary"
+            type="button"
+            onclick="clearProductFilters()"
+          >
+            Filtreleri Temizle
+          </button>
+
+        </div>
+
         <div id="productsTable"></div>
 
       </div>

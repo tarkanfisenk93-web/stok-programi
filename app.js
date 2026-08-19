@@ -5,12 +5,38 @@ let parties = [];
 let purchases = [];
 let sales = [];
 let movements = [];
+let purchaseItemHistory = [];
+let saleItemHistory = [];
 
 let purchaseItems = [];
 let saleItems = [];
 
 let editingPurchaseId = null;
 let editingSaleId = null;
+
+let productSort = {
+  key: 'name',
+  direction: 'asc'
+};
+
+const invoiceFilters = {
+  purchase: {
+    query: '',
+    dateFrom: '',
+    dateTo: '',
+    currency: 'all',
+    sortKey: 'invoice_date',
+    sortDirection: 'desc'
+  },
+  sale: {
+    query: '',
+    dateFrom: '',
+    dateTo: '',
+    currency: 'all',
+    sortKey: 'invoice_date',
+    sortDirection: 'desc'
+  }
+};
 
 const $ = id => document.getElementById(id);
 
@@ -33,6 +59,13 @@ const num = v => {
 
 const today = () =>
   new Date().toISOString().slice(0, 10);
+
+const searchable = value =>
+  String(value ?? '')
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ı/g, 'i');
 
 const esc = v =>
   String(v ?? '')
@@ -201,7 +234,9 @@ async function loadAll() {
       pa,
       pu,
       sa,
-      mo
+      mo,
+      pi,
+      si
     ] = await Promise.all([
 
       db
@@ -233,7 +268,15 @@ async function loadAll() {
         .select('*')
         .order('created_at', {
           ascending: false
-        })
+        }),
+
+      db
+        .from('purchase_items')
+        .select('*'),
+
+      db
+        .from('sale_items')
+        .select('*')
 
     ]);
 
@@ -242,12 +285,16 @@ async function loadAll() {
     if (pu.error) throw pu.error;
     if (sa.error) throw sa.error;
     if (mo.error) throw mo.error;
+    if (pi.error) throw pi.error;
+    if (si.error) throw si.error;
 
     products = pr.data || [];
     parties = pa.data || [];
     purchases = pu.data || [];
     sales = sa.data || [];
     movements = mo.data || [];
+    purchaseItemHistory = pi.data || [];
+    saleItemHistory = si.data || [];
 
     renderDashboard();
     renderProducts();
@@ -430,6 +477,123 @@ function renderDashboard() {
    ÜRÜNLER
 ========================================================= */
 
+function buildAveragePriceMap(
+  items,
+  invoices,
+  foreignKey
+) {
+
+  const totals = new Map();
+
+  items.forEach(item => {
+
+    const invoice = invoices.find(
+      x => String(x.id) ===
+        String(item[foreignKey])
+    );
+
+    if (!invoice) return;
+
+    const quantity =
+      num(item.quantity);
+
+    const rate =
+      invoiceDisplay(invoice).rate;
+
+    const current = totals.get(
+      String(item.product_id)
+    ) || {
+      quantity: 0,
+      valueTry: 0
+    };
+
+    current.quantity += quantity;
+    current.valueTry +=
+      quantity *
+      num(item.unit_price) *
+      rate;
+
+    totals.set(
+      String(item.product_id),
+      current
+    );
+
+  });
+
+  const averages = new Map();
+
+  totals.forEach((value, key) => {
+    averages.set(
+      key,
+      value.quantity > 0
+        ? value.valueTry /
+          value.quantity
+        : 0
+    );
+  });
+
+  return averages;
+
+}
+
+
+function productSortArrow(key) {
+
+  if (productSort.key !== key) {
+    return '↕';
+  }
+
+  return productSort.direction === 'asc'
+    ? '↑'
+    : '↓';
+
+}
+
+
+function setProductSort(key) {
+
+  if (productSort.key === key) {
+    productSort.direction =
+      productSort.direction === 'asc'
+        ? 'desc'
+        : 'asc';
+  } else {
+    productSort.key = key;
+    productSort.direction = 'asc';
+  }
+
+  renderProducts();
+
+}
+
+
+function clearProductFilters() {
+
+  if ($('productSearch')) {
+    $('productSearch').value = '';
+  }
+
+  if ($('productStatusFilter')) {
+    $('productStatusFilter').value = 'all';
+  }
+
+  if ($('productMinStock')) {
+    $('productMinStock').value = '';
+  }
+
+  if ($('productMaxStock')) {
+    $('productMaxStock').value = '';
+  }
+
+  productSort = {
+    key: 'name',
+    direction: 'asc'
+  };
+
+  renderProducts();
+
+}
+
 function renderProducts() {
 
   const c =
@@ -438,20 +602,112 @@ function renderProducts() {
   if (!c) return;
 
   const q =
-    ($('productSearch')?.value || '')
-      .toLowerCase();
+    searchable(
+      $('productSearch')?.value || ''
+    );
+
+  const status =
+    $('productStatusFilter')?.value ||
+    'all';
+
+  const minStockText =
+    $('productMinStock')?.value ?? '';
+
+  const maxStockText =
+    $('productMaxStock')?.value ?? '';
+
+  const minStock =
+    minStockText === ''
+      ? null
+      : num(minStockText);
+
+  const maxStock =
+    maxStockText === ''
+      ? null
+      : num(maxStockText);
+
+  const purchaseAverages =
+    buildAveragePriceMap(
+      purchaseItemHistory,
+      purchases,
+      'purchase_id'
+    );
+
+  const saleAverages =
+    buildAveragePriceMap(
+      saleItemHistory,
+      sales,
+      'sale_id'
+    );
 
   const list =
     products.filter(
-      p =>
-        String(p.code || '')
-          .toLowerCase()
-          .includes(q) ||
+      p => {
 
-        String(p.name || '')
-          .toLowerCase()
-          .includes(q)
-    );
+        const matchesSearch =
+          searchable(p.code).includes(q) ||
+          searchable(p.name).includes(q);
+
+        const critical =
+          num(p.stock_quantity) <=
+          num(p.critical_stock);
+
+        const matchesStatus =
+          status === 'all' ||
+          (status === 'critical' && critical) ||
+          (status === 'normal' && !critical);
+
+        const stock =
+          num(p.stock_quantity);
+
+        const matchesMin =
+          minStock === null ||
+          stock >= minStock;
+
+        const matchesMax =
+          maxStock === null ||
+          stock <= maxStock;
+
+        return matchesSearch &&
+          matchesStatus &&
+          matchesMin &&
+          matchesMax;
+
+      }
+    )
+    .sort((a, b) => {
+
+      const values = product => ({
+        code: searchable(product.code),
+        name: searchable(product.name),
+        stock: num(product.stock_quantity),
+        critical: num(product.critical_stock),
+        purchase: purchaseAverages.get(String(product.id)) || 0,
+        sale: saleAverages.get(String(product.id)) || 0,
+        status:
+          num(product.stock_quantity) <=
+          num(product.critical_stock)
+            ? 0
+            : 1
+      });
+
+      const av = values(a)[productSort.key];
+      const bv = values(b)[productSort.key];
+
+      const result =
+        typeof av === 'string'
+          ? av.localeCompare(
+              bv,
+              'tr-TR',
+              { numeric: true }
+            )
+          : av - bv;
+
+      return productSort.direction === 'asc'
+        ? result
+        : -result;
+
+    });
 
   if (!list.length) {
 
@@ -468,13 +724,13 @@ function renderProducts() {
       <thead>
 
         <tr>
-          <th>Kod</th>
-          <th>Ürün</th>
-          <th>Stok</th>
-          <th>Kritik</th>
-          <th>Alış</th>
-          <th>Satış</th>
-          <th>Durum</th>
+          <th><button class="sort-button" onclick="setProductSort('code')">Kod ${productSortArrow('code')}</button></th>
+          <th><button class="sort-button" onclick="setProductSort('name')">Ürün ${productSortArrow('name')}</button></th>
+          <th><button class="sort-button" onclick="setProductSort('stock')">Stok ${productSortArrow('stock')}</button></th>
+          <th><button class="sort-button" onclick="setProductSort('critical')">Kritik ${productSortArrow('critical')}</button></th>
+          <th><button class="sort-button" onclick="setProductSort('purchase')">Ort. Alış ${productSortArrow('purchase')}</button></th>
+          <th><button class="sort-button" onclick="setProductSort('sale')">Ort. Satış ${productSortArrow('sale')}</button></th>
+          <th><button class="sort-button" onclick="setProductSort('status')">Durum ${productSortArrow('status')}</button></th>
           <th>İşlem</th>
         </tr>
 
@@ -509,11 +765,19 @@ function renderProducts() {
               </td>
 
               <td>
-                ${money(p.purchase_price)}
+                ${money(
+                  purchaseAverages.get(
+                    String(p.id)
+                  ) || 0
+                )}
               </td>
 
               <td>
-                ${money(p.sale_price)}
+                ${money(
+                  saleAverages.get(
+                    String(p.id)
+                  ) || 0
+                )}
               </td>
 
               <td>
@@ -578,8 +842,16 @@ function openProductForm(id = null) {
 
   const p =
     products.find(
-      x => x.id === id
+      x => String(x.id) ===
+        String(id)
     );
+
+  if (id && !p) {
+    toast(
+      'Düzenlenecek ürün bulunamadı. Sayfayı yenileyip tekrar deneyin.'
+    );
+    return;
+  }
 
   openModal(
 
@@ -650,7 +922,7 @@ function openProductForm(id = null) {
             id="formProductCritical"
             type="number"
             step="0.01"
-            value="${num(p?.critical_stock || 5)}"
+            value="${num(p?.critical_stock ?? 5)}"
           >
 
         </div>
@@ -661,12 +933,20 @@ function openProductForm(id = null) {
             Alış Fiyatı
           </label>
 
-          <input
-            id="formProductPurchase"
-            type="number"
-            step="0.01"
-            value="${num(p?.purchase_price)}"
-          >
+          <div class="price-currency-field">
+            <input
+              id="formProductPurchase"
+              type="number"
+              step="0.01"
+              value="${num(p?.purchase_price)}"
+            >
+
+            <select id="formProductPurchaseCurrency">
+              <option value="TRY" ${(p?.purchase_currency || 'TRY') === 'TRY' ? 'selected' : ''}>TL</option>
+              <option value="USD" ${p?.purchase_currency === 'USD' ? 'selected' : ''}>USD</option>
+              <option value="EUR" ${p?.purchase_currency === 'EUR' ? 'selected' : ''}>EUR</option>
+            </select>
+          </div>
 
         </div>
 
@@ -676,12 +956,20 @@ function openProductForm(id = null) {
             Satış Fiyatı
           </label>
 
-          <input
-            id="formProductSale"
-            type="number"
-            step="0.01"
-            value="${num(p?.sale_price)}"
-          >
+          <div class="price-currency-field">
+            <input
+              id="formProductSale"
+              type="number"
+              step="0.01"
+              value="${num(p?.sale_price)}"
+            >
+
+            <select id="formProductSaleCurrency">
+              <option value="TRY" ${(p?.sale_currency || 'TRY') === 'TRY' ? 'selected' : ''}>TL</option>
+              <option value="USD" ${p?.sale_currency === 'USD' ? 'selected' : ''}>USD</option>
+              <option value="EUR" ${p?.sale_currency === 'EUR' ? 'selected' : ''}>EUR</option>
+            </select>
+          </div>
 
         </div>
 
@@ -718,31 +1006,66 @@ function editProduct(id) {
 }
 
 
-function openProductMovements(id) {
+async function openProductMovements(id) {
 
   const product =
-    products.find(p => p.id === id);
+    products.find(
+      p => String(p.id) === String(id)
+    );
 
   if (!product) {
     toast('Ürün bulunamadı.');
     return;
   }
 
-  const list = movements.filter(
-    m => m.product_id === id
-  );
+  let list = [];
+
+  try {
+
+    const result = await db
+      .from('stock_movements')
+      .select('*')
+      .eq('product_id', id)
+      .order('created_at', {
+        ascending: false
+      });
+
+    if (result.error) {
+      throw result.error;
+    }
+
+    list = result.data || [];
+
+  } catch (error) {
+    console.error(error);
+    toast(
+      'Stok hareketleri alınamadı: ' +
+      error.message
+    );
+    return;
+  }
 
   const rows = list.map(m => {
 
     const document =
       m.source_type === 'purchase'
-        ? purchases.find(x => x.id === m.source_id)
+        ? purchases.find(
+            x => String(x.id) ===
+              String(m.source_id)
+          )
         : m.source_type === 'sale'
-          ? sales.find(x => x.id === m.source_id)
+          ? sales.find(
+              x => String(x.id) ===
+                String(m.source_id)
+            )
           : null;
 
     const party = parties.find(
-      x => x.id === (m.party_id || document?.party_id)
+      x => String(x.id) ===
+        String(
+          m.party_id ||
+          document?.party_id
+        )
     );
 
     const documentType =
@@ -839,10 +1162,18 @@ async function saveProduct(id) {
         $('formProductPurchase').value
       ),
 
+    purchase_currency:
+      $('formProductPurchaseCurrency')
+        .value,
+
     sale_price:
       num(
         $('formProductSale').value
-      )
+      ),
+
+    sale_currency:
+      $('formProductSaleCurrency')
+        .value
 
   };
 
@@ -2305,11 +2636,7 @@ async function savePurchase() {
               num(
                 p.stock_quantity
               ) +
-              i.quantity,
-
-            purchase_price:
-              i.unit_price *
-              totals.exchangeRate
+              i.quantity
 
           })
           .eq(
@@ -3020,11 +3347,7 @@ async function saveSale() {
           .update({
 
             stock_quantity:
-              stock,
-
-            sale_price:
-              i.unit_price *
-              totals.exchangeRate
+              stock
 
           })
           .eq(
@@ -5511,6 +5834,106 @@ function formatInvoiceDate(value) {
 }
 
 
+function invoiceSortArrow(
+  filterType,
+  key
+) {
+
+  const filter =
+    invoiceFilters[filterType];
+
+  if (filter.sortKey !== key) {
+    return '↕';
+  }
+
+  return filter.sortDirection === 'asc'
+    ? '↑'
+    : '↓';
+
+}
+
+
+function setInvoiceSort(
+  filterType,
+  key
+) {
+
+  const filter =
+    invoiceFilters[filterType];
+
+  if (filter.sortKey === key) {
+    filter.sortDirection =
+      filter.sortDirection === 'asc'
+        ? 'desc'
+        : 'asc';
+  } else {
+    filter.sortKey = key;
+    filter.sortDirection = 'asc';
+  }
+
+  filterType === 'purchase'
+    ? renderPurchaseInvoices()
+    : renderSaleInvoices();
+
+}
+
+
+function updateInvoiceFilter(
+  filterType,
+  key,
+  value
+) {
+
+  invoiceFilters[filterType][key] =
+    value;
+
+  filterType === 'purchase'
+    ? renderPurchaseInvoices()
+    : renderSaleInvoices();
+
+}
+
+
+function clearInvoiceFilters(filterType) {
+
+  Object.assign(
+    invoiceFilters[filterType],
+    {
+      query: '',
+      dateFrom: '',
+      dateTo: '',
+      currency: 'all',
+      sortKey: 'invoice_date',
+      sortDirection: 'desc'
+    }
+  );
+
+  const prefix =
+    filterType === 'purchase'
+      ? 'purchase'
+      : 'sale';
+
+  [
+    'Query',
+    'DateFrom',
+    'DateTo'
+  ].forEach(suffix => {
+    if ($(prefix + 'Filter' + suffix)) {
+      $(prefix + 'Filter' + suffix).value = '';
+    }
+  });
+
+  if ($(prefix + 'FilterCurrency')) {
+    $(prefix + 'FilterCurrency').value = 'all';
+  }
+
+  filterType === 'purchase'
+    ? renderPurchaseInvoices()
+    : renderSaleInvoices();
+
+}
+
+
 function renderInvoiceList(
   containerId,
   invoices,
@@ -5524,41 +5947,195 @@ function renderInvoiceList(
   const isPurchase =
     type === 'Alış';
 
-  if (!invoices.length) {
+  const filterType =
+    isPurchase
+      ? 'purchase'
+      : 'sale';
 
+  const prefix = filterType;
+  const filter =
+    invoiceFilters[filterType];
+
+  if (!$(prefix + 'InvoiceFilterBar')) {
     c.innerHTML = `
+      <div class="invoice-list-help">
+        Faturayı görüntüleyebilir, değiştirebilir veya silebilirsiniz.
+      </div>
+
+      <div
+        id="${prefix}InvoiceFilterBar"
+        class="table-filter-bar invoice-filter-bar"
+      >
+        <input
+          id="${prefix}FilterQuery"
+          placeholder="Fatura no veya ünvan ara..."
+          oninput="updateInvoiceFilter('${filterType}','query',this.value)"
+        >
+
+        <div class="filter-date">
+          <label>Başlangıç</label>
+          <input
+            id="${prefix}FilterDateFrom"
+            type="date"
+            onchange="updateInvoiceFilter('${filterType}','dateFrom',this.value)"
+          >
+        </div>
+
+        <div class="filter-date">
+          <label>Bitiş</label>
+          <input
+            id="${prefix}FilterDateTo"
+            type="date"
+            onchange="updateInvoiceFilter('${filterType}','dateTo',this.value)"
+          >
+        </div>
+
+        <select
+          id="${prefix}FilterCurrency"
+          onchange="updateInvoiceFilter('${filterType}','currency',this.value)"
+        >
+          <option value="all">Tüm fatura türleri</option>
+          <option value="TRY">TL faturalar</option>
+          <option value="USD">USD faturalar</option>
+          <option value="EUR">EUR faturalar</option>
+        </select>
+
+        <button
+          class="secondary"
+          type="button"
+          onclick="clearInvoiceFilters('${filterType}')"
+        >
+          Filtreleri Temizle
+        </button>
+      </div>
+
+      <div id="${prefix}InvoiceTable"></div>
+    `;
+  }
+
+  const tableContainer =
+    $(prefix + 'InvoiceTable');
+
+  if (!tableContainer) return;
+
+  const q = searchable(filter.query);
+
+  const list = invoices
+    .filter(invoice => {
+
+      const party = parties.find(
+        x => String(x.id) ===
+          String(invoice.party_id)
+      );
+
+      const currency =
+        invoiceDisplay(invoice).currency;
+
+      const matchesQuery =
+        searchable(invoice.invoice_no)
+          .includes(q) ||
+        searchable(party?.name)
+          .includes(q);
+
+      const matchesFrom =
+        !filter.dateFrom ||
+        String(invoice.invoice_date) >=
+          filter.dateFrom;
+
+      const matchesTo =
+        !filter.dateTo ||
+        String(invoice.invoice_date) <=
+          filter.dateTo;
+
+      const matchesCurrency =
+        filter.currency === 'all' ||
+        currency === filter.currency;
+
+      return matchesQuery &&
+        matchesFrom &&
+        matchesTo &&
+        matchesCurrency;
+
+    })
+    .sort((a, b) => {
+
+      const getValue = invoice => {
+        const party = parties.find(
+          x => String(x.id) ===
+            String(invoice.party_id)
+        );
+        const display = invoiceDisplay(invoice);
+
+        const values = {
+          invoice_date: String(invoice.invoice_date || ''),
+          invoice_no: searchable(invoice.invoice_no),
+          party: searchable(party?.name),
+          currency: display.currency,
+          rate: display.rate,
+          subtotal: display.subtotalTry,
+          vat: display.vatTry,
+          total: display.totalTry
+        };
+
+        return values[filter.sortKey];
+      };
+
+      const av = getValue(a);
+      const bv = getValue(b);
+
+      const result =
+        typeof av === 'string'
+          ? av.localeCompare(
+              bv,
+              'tr-TR',
+              { numeric: true }
+            )
+          : av - bv;
+
+      return filter.sortDirection === 'asc'
+        ? result
+        : -result;
+
+    });
+
+  if (!list.length) {
+    tableContainer.innerHTML = `
       <div class="empty">
-        Henüz kayıtlı ${isPurchase ? 'satın alma' : 'satış'} faturası yok.
+        Filtrelere uygun ${isPurchase ? 'satın alma' : 'satış'} faturası bulunamadı.
       </div>
     `;
-
     return;
   }
 
-  c.innerHTML = `
-    <div class="invoice-list-help">
-      Faturayı görüntüleyebilir, değiştirebilir veya silebilirsiniz.
-    </div>
+  const sortHead = (key, label) => `
+    <button
+      class="sort-button"
+      onclick="setInvoiceSort('${filterType}','${key}')"
+    >
+      ${label} ${invoiceSortArrow(filterType, key)}
+    </button>
+  `;
 
+  tableContainer.innerHTML = `
     <div class="table-scroll">
       <table>
         <thead>
           <tr>
-            <th>Tarih</th>
-            <th>Fatura No</th>
-            <th>Ünvan</th>
-            <th>Fatura Türü</th>
-            <th>Kur</th>
-            <th>Matrah</th>
-            <th>KDV</th>
-            <th>Toplam Fatura Tutarı</th>
-            <th>TL Karşılığı</th>
+            <th>${sortHead('invoice_date', 'Tarih')}</th>
+            <th>${sortHead('invoice_no', 'Fatura No')}</th>
+            <th>${sortHead('party', 'Ünvan')}</th>
+            <th>${sortHead('currency', 'Fatura Türü')}</th>
+            <th>${sortHead('rate', 'Kur')}</th>
+            <th>${sortHead('subtotal', 'Matrah')}</th>
+            <th>${sortHead('vat', 'KDV')}</th>
+            <th>${sortHead('total', 'Toplam Fatura Tutarı')}</th>
+            <th>${sortHead('total', 'TL Karşılığı')}</th>
             <th>İşlem</th>
           </tr>
         </thead>
 
         <tbody>
-          ${invoices.map(invoice => {
+          ${list.map(invoice => {
 
             const party = parties.find(
               x => String(x.id) === String(invoice.party_id)
@@ -5572,45 +6149,17 @@ function renderInvoiceList(
                 <td>${formatInvoiceDate(invoice.invoice_date)}</td>
                 <td><strong>${esc(invoice.invoice_no || '-')}</strong></td>
                 <td>${esc(party?.name || '-')}</td>
-                <td>
-                  ${display.currency === 'TRY' ? 'TL Fatura' : `Döviz (${display.currency})`}
-                </td>
-                <td>
-                  ${display.currency === 'TRY' ? '-' : `1 ${display.currency} = ${moneyCode(display.rate, 'TRY')}`}
-                </td>
+                <td>${display.currency === 'TRY' ? 'TL Fatura' : `Döviz (${display.currency})`}</td>
+                <td>${display.currency === 'TRY' ? '-' : `1 ${display.currency} = ${moneyCode(display.rate, 'TRY')}`}</td>
                 <td>${money(invoice.subtotal, display.currency)}</td>
                 <td>${money(invoice.vat_amount, display.currency)}</td>
-                <td>
-                  <strong>${money(invoice.total, display.currency)}</strong>
-                </td>
-                <td>
-                  <strong>${money(display.totalTry, 'TRY')}</strong>
-                </td>
+                <td><strong>${money(invoice.total, display.currency)}</strong></td>
+                <td><strong>${money(display.totalTry, 'TRY')}</strong></td>
                 <td>
                   <div class="table-actions">
-                    <button
-                      class="secondary"
-                      type="button"
-                      onclick="showInvoiceDetail('${type}','${invoice.id}')"
-                    >
-                      Göster
-                    </button>
-
-                    <button
-                      class="edit-button"
-                      type="button"
-                      onclick="${isPurchase ? 'editPurchaseInvoice' : 'editSaleInvoice'}('${invoice.id}')"
-                    >
-                      Değiştir
-                    </button>
-
-                    <button
-                      class="danger"
-                      type="button"
-                      onclick="${isPurchase ? 'deletePurchaseInvoice' : 'deleteSaleInvoice'}('${invoice.id}')"
-                    >
-                      Sil
-                    </button>
+                    <button class="secondary" type="button" onclick="showInvoiceDetail('${type}','${invoice.id}')">Göster</button>
+                    <button class="edit-button" type="button" onclick="${isPurchase ? 'editPurchaseInvoice' : 'editSaleInvoice'}('${invoice.id}')">Değiştir</button>
+                    <button class="danger" type="button" onclick="${isPurchase ? 'deletePurchaseInvoice' : 'deleteSaleInvoice'}('${invoice.id}')">Sil</button>
                   </div>
                 </td>
               </tr>
@@ -6182,10 +6731,7 @@ async function updatePurchaseInvoice(
     if (itemResult.error) throw itemResult.error;
 
     await applyStockChanges(
-      changes,
-      purchaseItems,
-      'purchase_price',
-      data.totals.exchangeRate
+      changes
     );
 
     const partyName = parties.find(
@@ -6284,10 +6830,7 @@ async function updateSaleInvoice(
     if (itemResult.error) throw itemResult.error;
 
     await applyStockChanges(
-      changes,
-      saleItems,
-      'sale_price',
-      data.totals.exchangeRate
+      changes
     );
 
     const partyName = parties.find(

@@ -13,13 +13,33 @@
 
     <div class="logo">📦 BTF STOK</div>
 
-    <button class="menu active" data-page="dashboard">🏠 Ana Sayfa</button>
-    <button class="menu" data-page="products">📦 Ürünler</button>
-    <button class="menu" data-page="purchase">📥 Satın Alma</button>
-    <button class="menu" data-page="sales">📤 Satış</button>
-    <button class="menu" data-page="movements">🔄 Stok Hareketleri</button>
-    <button class="menu" data-page="parties">👥 Cari / Müşteriler</button>
-    <button class="menu" data-page="reports">📊 Raporlar</button>
+    <button class="menu active" data-page="dashboard">
+      🏠 Ana Sayfa
+    </button>
+
+    <button class="menu" data-page="products">
+      📦 Ürünler
+    </button>
+
+    <button class="menu" data-page="purchase">
+      📥 Satın Alma
+    </button>
+
+    <button class="menu" data-page="sales">
+      📤 Satış
+    </button>
+
+    <button class="menu" data-page="movements">
+      🔄 Stok Hareketleri
+    </button>
+
+    <button class="menu" data-page="parties">
+      👥 Cari / Müşteriler
+    </button>
+
+    <button class="menu" data-page="reports">
+      📊 Raporlar
+    </button>
 
     <div class="sidebar-bottom">
       BTF Bilişim
@@ -43,6 +63,8 @@
 
     </header>
 
+
+    <!-- ==================== ANA SAYFA ==================== -->
 
     <section id="dashboard" class="page">
 
@@ -115,6 +137,8 @@
     </section>
 
 
+    <!-- ==================== ÜRÜNLER ==================== -->
+
     <section id="products" class="page hidden">
 
       <div class="panel">
@@ -130,7 +154,10 @@
               placeholder="Ürün kodu veya adı ara..."
             >
 
-            <button class="primary" onclick="openProductForm()">
+            <button
+              class="primary"
+              onclick="openProductForm()"
+            >
               + Ürün Ekle
             </button>
 
@@ -145,6 +172,8 @@
     </section>
 
 
+    <!-- ==================== SATIN ALMA ==================== -->
+
     <section id="purchase" class="page hidden">
 
       <div class="panel">
@@ -154,9 +183,8 @@
           <h2>📥 Satın Alma</h2>
 
           <button
-            id="newPurchaseBtn"
             class="primary"
-            onclick="showPurchaseForm()"
+            onclick="openPurchaseForm()"
           >
             + Fatura Ekle
           </button>
@@ -164,15 +192,21 @@
         </div>
 
 
-        <div id="purchaseForm" class="hidden">
+        <!-- YENİ ALIŞ FATURASI
+             BAŞLANGIÇTA GİZLİ -->
+
+        <div
+          id="purchaseFormArea"
+          class="hidden"
+        >
 
           <div class="panel-header">
 
-            <h3>Yeni Alış Faturası</h3>
+            <h2>Yeni Alış Faturası</h2>
 
             <button
               class="secondary"
-              onclick="hidePurchaseForm()"
+              onclick="closePurchaseForm()"
             >
               ✕ Kapat
             </button>
@@ -184,46 +218,75 @@
 
             <div>
               <label>Fatura No</label>
+
               <input
                 id="purchaseInvoiceNo"
                 placeholder="Örn: AL-2026-001"
               >
             </div>
 
+
             <div>
               <label>Tarih</label>
+
               <input
                 id="purchaseDate"
                 type="date"
               >
             </div>
 
+
             <div>
               <label>Tedarikçi</label>
-              <select id="purchaseParty"></select>
+
+              <select id="purchaseParty">
+                <option value="">
+                  Cari seçin...
+                </option>
+              </select>
+
             </div>
+
+          </div>
+
+
+          <!-- PARA BİRİMİ -->
+
+          <div class="invoice-head">
 
             <div>
+
               <label>Para Birimi</label>
-              <select
-                id="purchaseCurrency"
-                onchange="updatePurchaseCurrency()"
-              >
-                <option value="TRY" selected>₺ Türk Lirası</option>
-                <option value="USD">$ Dolar</option>
+
+              <select id="purchaseCurrency">
+
+                <option value="TRY">
+                  ₺ Türk Lirası
+                </option>
+
+                <option value="USD">
+                  $ Dolar
+                </option>
+
+                <option value="EUR">
+                  € Euro
+                </option>
+
               </select>
+
             </div>
 
-            <div id="purchaseExchangeRateBox" class="hidden">
+
+            <div>
 
               <label>USD / TL Kuru</label>
 
               <input
-                id="purchaseExchangeRate"
+                id="purchaseUsdRate"
                 type="number"
                 min="0"
                 step="0.0001"
-                placeholder="Örn: 41.2500"
+                placeholder="Örn: 40,50"
               >
 
             </div>
@@ -231,9 +294,16 @@
           </div>
 
 
+          <!-- ÜRÜN EKLEME -->
+
           <div class="invoice-add">
 
-            <select id="purchaseProduct"></select>
+            <select id="purchaseProduct">
+              <option value="">
+                Ürün seçin...
+              </option>
+            </select>
+
 
             <input
               id="purchaseQty"
@@ -243,6 +313,7 @@
               placeholder="Miktar"
             >
 
+
             <input
               id="purchasePrice"
               type="number"
@@ -251,13 +322,23 @@
               placeholder="Birim fiyat"
             >
 
+
             <select id="purchaseVat">
 
-              <option value="1">KDV %1</option>
-              <option value="10">KDV %10</option>
-              <option value="20" selected>KDV %20</option>
+              <option value="1">
+                KDV %1
+              </option>
+
+              <option value="10">
+                KDV %10
+              </option>
+
+              <option value="20" selected>
+                KDV %20
+              </option>
 
             </select>
+
 
             <button
               class="primary"
@@ -272,21 +353,40 @@
           <div id="purchaseItems"></div>
 
 
+          <!-- TOPLAMLAR -->
+
           <div class="invoice-total">
 
             <div>
+
               <span>Matrah</span>
-              <strong id="purchaseSubtotal">0,00 ₺</strong>
+
+              <strong id="purchaseSubtotal">
+                0,00 ₺
+              </strong>
+
             </div>
+
 
             <div>
+
               <span>KDV</span>
-              <strong id="purchaseVatTotal">0,00 ₺</strong>
+
+              <strong id="purchaseVatTotal">
+                0,00 ₺
+              </strong>
+
             </div>
 
+
             <div class="grand-total">
+
               <span>Genel Toplam</span>
-              <strong id="purchaseGrandTotal">0,00 ₺</strong>
+
+              <strong id="purchaseGrandTotal">
+                0,00 ₺
+              </strong>
+
             </div>
 
           </div>
@@ -298,6 +398,7 @@
               id="purchaseNote"
               placeholder="Fatura açıklaması..."
             ></textarea>
+
 
             <button
               class="success big"
@@ -311,28 +412,24 @@
         </div>
 
 
-        <div class="invoice-list-section">
+        <!-- KAYITLI ALIŞ FATURALARI -->
 
-          <div class="panel-header">
+        <div class="panel-header">
 
-            <h3>📋 Kayıtlı Alış Faturaları</h3>
-
-            <input
-              id="purchaseInvoiceSearch"
-              placeholder="Fatura ara..."
-              oninput="renderDocuments()"
-            >
-
-          </div>
-
-          <div id="purchaseDocumentsTable"></div>
+          <h2>📋 Kayıtlı Alış Faturaları</h2>
 
         </div>
+
+        <div id="purchaseInvoicesTable"></div>
+
+        <div id="purchaseDocumentsTable"></div>
 
       </div>
 
     </section>
 
+
+    <!-- ==================== SATIŞ ==================== -->
 
     <section id="sales" class="page hidden">
 
@@ -343,9 +440,8 @@
           <h2>📤 Satış</h2>
 
           <button
-            id="newSaleBtn"
             class="primary"
-            onclick="showSaleForm()"
+            onclick="openSaleForm()"
           >
             + Fatura Ekle
           </button>
@@ -353,15 +449,21 @@
         </div>
 
 
-        <div id="saleForm" class="hidden">
+        <!-- YENİ SATIŞ FATURASI
+             BAŞLANGIÇTA GİZLİ -->
+
+        <div
+          id="saleFormArea"
+          class="hidden"
+        >
 
           <div class="panel-header">
 
-            <h3>Yeni Satış Faturası</h3>
+            <h2>Yeni Satış Faturası</h2>
 
             <button
               class="secondary"
-              onclick="hideSaleForm()"
+              onclick="closeSaleForm()"
             >
               ✕ Kapat
             </button>
@@ -372,6 +474,7 @@
           <div class="invoice-head">
 
             <div>
+
               <label>Fatura No</label>
 
               <input
@@ -398,36 +501,56 @@
 
               <label>Müşteri</label>
 
-              <select id="saleParty"></select>
+              <select id="saleParty">
+
+                <option value="">
+                  Cari seçin...
+                </option>
+
+              </select>
+
+            </div>
+
+          </div>
+
+
+          <!-- PARA BİRİMİ -->
+
+          <div class="invoice-head">
+
+            <div>
+
+              <label>Para Birimi</label>
+
+              <select id="saleCurrency">
+
+                <option value="TRY">
+                  ₺ Türk Lirası
+                </option>
+
+                <option value="USD">
+                  $ Dolar
+                </option>
+
+                <option value="EUR">
+                  € Euro
+                </option>
+
+              </select>
 
             </div>
 
 
             <div>
 
-              <label>Para Birimi</label>
-
-              <select
-                id="saleCurrency"
-                onchange="updateSaleCurrency()"
-              >
-                <option value="TRY" selected>₺ Türk Lirası</option>
-                <option value="USD">$ Dolar</option>
-              </select>
-
-            </div>
-
-
-            <div id="saleExchangeRateBox" class="hidden">
-
               <label>USD / TL Kuru</label>
 
               <input
-                id="saleExchangeRate"
+                id="saleUsdRate"
                 type="number"
                 min="0"
                 step="0.0001"
-                placeholder="Örn: 41.2500"
+                placeholder="Örn: 40,50"
               >
 
             </div>
@@ -435,9 +558,18 @@
           </div>
 
 
+          <!-- ÜRÜN EKLEME -->
+
           <div class="invoice-add">
 
-            <select id="saleProduct"></select>
+            <select id="saleProduct">
+
+              <option value="">
+                Ürün seçin...
+              </option>
+
+            </select>
+
 
             <input
               id="saleQty"
@@ -447,6 +579,7 @@
               placeholder="Miktar"
             >
 
+
             <input
               id="salePrice"
               type="number"
@@ -455,13 +588,23 @@
               placeholder="Birim fiyat"
             >
 
+
             <select id="saleVat">
 
-              <option value="1">KDV %1</option>
-              <option value="10">KDV %10</option>
-              <option value="20" selected>KDV %20</option>
+              <option value="1">
+                KDV %1
+              </option>
+
+              <option value="10">
+                KDV %10
+              </option>
+
+              <option value="20" selected>
+                KDV %20
+              </option>
 
             </select>
+
 
             <button
               class="primary"
@@ -476,21 +619,40 @@
           <div id="saleItems"></div>
 
 
+          <!-- TOPLAMLAR -->
+
           <div class="invoice-total">
 
             <div>
+
               <span>Matrah</span>
-              <strong id="saleSubtotal">0,00 ₺</strong>
+
+              <strong id="saleSubtotal">
+                0,00 ₺
+              </strong>
+
             </div>
+
 
             <div>
+
               <span>KDV</span>
-              <strong id="saleVatTotal">0,00 ₺</strong>
+
+              <strong id="saleVatTotal">
+                0,00 ₺
+              </strong>
+
             </div>
 
+
             <div class="grand-total">
+
               <span>Genel Toplam</span>
-              <strong id="saleGrandTotal">0,00 ₺</strong>
+
+              <strong id="saleGrandTotal">
+                0,00 ₺
+              </strong>
+
             </div>
 
           </div>
@@ -502,6 +664,7 @@
               id="saleNote"
               placeholder="Fatura açıklaması..."
             ></textarea>
+
 
             <button
               class="success big"
@@ -515,30 +678,29 @@
         </div>
 
 
-        <div class="invoice-list-section">
+        <!-- KAYITLI SATIŞ FATURALARI -->
 
-          <div class="panel-header">
+        <div class="panel-header">
 
-            <h3>📋 Kayıtlı Satış Faturaları</h3>
-
-            <input
-              id="saleInvoiceSearch"
-              placeholder="Fatura ara..."
-              oninput="renderDocuments()"
-            >
-
-          </div>
-
-          <div id="saleDocumentsTable"></div>
+          <h2>📋 Kayıtlı Satış Faturaları</h2>
 
         </div>
+
+        <div id="saleInvoicesTable"></div>
+
+        <div id="salesDocumentsTable"></div>
 
       </div>
 
     </section>
 
 
-    <section id="movements" class="page hidden">
+    <!-- ==================== STOK HAREKETLERİ ==================== -->
+
+    <section
+      id="movements"
+      class="page hidden"
+    >
 
       <div class="panel">
 
@@ -562,7 +724,12 @@
     </section>
 
 
-    <section id="parties" class="page hidden">
+    <!-- ==================== CARİ ==================== -->
+
+    <section
+      id="parties"
+      class="page hidden"
+    >
 
       <div class="panel">
 
@@ -586,28 +753,56 @@
     </section>
 
 
-    <section id="reports" class="page hidden">
+    <!-- ==================== RAPORLAR ==================== -->
+
+    <section
+      id="reports"
+      class="page hidden"
+    >
 
       <div class="cards">
 
         <div class="card">
+
           <span>Alış Fatura Sayısı</span>
-          <strong id="purchaseCount">0</strong>
+
+          <strong id="purchaseCount">
+            0
+          </strong>
+
         </div>
 
+
         <div class="card">
+
           <span>Satış Fatura Sayısı</span>
-          <strong id="saleCount">0</strong>
+
+          <strong id="saleCount">
+            0
+          </strong>
+
         </div>
 
+
         <div class="card">
+
           <span>Toplam Alış</span>
-          <strong id="reportPurchaseTotal">0,00 ₺</strong>
+
+          <strong id="reportPurchaseTotal">
+            0,00 ₺
+          </strong>
+
         </div>
 
+
         <div class="card">
+
           <span>Toplam Satış</span>
-          <strong id="reportSaleTotal">0,00 ₺</strong>
+
+          <strong id="reportSaleTotal">
+            0,00 ₺
+          </strong>
+
         </div>
 
       </div>
@@ -626,15 +821,24 @@
   </main>
 
 
-  <div id="modal" class="modal hidden">
+  <!-- ==================== MODAL ==================== -->
+
+  <div
+    id="modal"
+    class="modal hidden"
+  >
 
     <div class="modal-box">
 
       <div class="modal-header">
 
-        <h2 id="modalTitle">İşlem</h2>
+        <h2 id="modalTitle">
+          İşlem
+        </h2>
 
-        <button onclick="closeModal()">✕</button>
+        <button onclick="closeModal()">
+          ✕
+        </button>
 
       </div>
 
@@ -645,12 +849,72 @@
   </div>
 
 
+  <!-- TOAST -->
+
   <div id="toast"></div>
 
 
+  <!-- ==================== SCRIPTS ==================== -->
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <script src="config.js"></script>
+
   <script src="app.js"></script>
+
+
+  <!-- FATURA FORMU AÇ / KAPAT -->
+
+  <script>
+
+    function openPurchaseForm() {
+
+      const form =
+        document.getElementById("purchaseFormArea");
+
+      if (form) {
+        form.classList.remove("hidden");
+      }
+
+    }
+
+
+    function closePurchaseForm() {
+
+      const form =
+        document.getElementById("purchaseFormArea");
+
+      if (form) {
+        form.classList.add("hidden");
+      }
+
+    }
+
+
+    function openSaleForm() {
+
+      const form =
+        document.getElementById("saleFormArea");
+
+      if (form) {
+        form.classList.remove("hidden");
+      }
+
+    }
+
+
+    function closeSaleForm() {
+
+      const form =
+        document.getElementById("saleFormArea");
+
+      if (form) {
+        form.classList.add("hidden");
+      }
+
+    }
+
+  </script>
 
 </body>
 </html>

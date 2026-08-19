@@ -144,7 +144,7 @@ function setupNavigation() {
 
         preparePurchasePage();
 
-        closePurchaseForm();
+        closePurchaseInvoiceModal();
 
         renderPurchaseInvoices();
 
@@ -152,7 +152,7 @@ function setupNavigation() {
 
       if (page === 'sales') {
         prepareSalePage();
-        closeSaleForm();
+        closeSaleInvoiceModal();
         renderSaleInvoices();
       }
 
@@ -1329,6 +1329,10 @@ function openModal(title, content) {
     content;
 
   $('modal').classList.remove(
+    'invoice-modal-open'
+  );
+
+  $('modal').classList.remove(
     'hidden'
   );
 
@@ -1337,8 +1341,30 @@ function openModal(title, content) {
 
 function closeModal() {
 
+  if (
+    $('purchaseFormArea')?.closest(
+      '#modalForm'
+    )
+  ) {
+    closePurchaseInvoiceModal();
+    return;
+  }
+
+  if (
+    $('saleFormArea')?.closest(
+      '#modalForm'
+    )
+  ) {
+    closeSaleInvoiceModal();
+    return;
+  }
+
   $('modal')?.classList.add(
     'hidden'
+  );
+
+  $('modal')?.classList.remove(
+    'invoice-modal-open'
   );
 
 }
@@ -2388,7 +2414,7 @@ function clearPurchase() {
 
   renderPurchaseItems();
 
-  closePurchaseForm();
+  closePurchaseInvoiceModal();
 
 }
 
@@ -3096,7 +3122,7 @@ function clearSale() {
 
   renderSaleItems();
 
-  closeSaleForm();
+  closeSaleInvoiceModal();
 
 }
 
@@ -5621,7 +5647,73 @@ function renderSaleInvoices() {
 }
 
 
-function openPurchaseForm() {
+function showInvoiceFormModal(
+  areaId,
+  placeholderId,
+  title
+) {
+
+  const area = $(areaId);
+  const modal = $('modal');
+  const modalForm = $('modalForm');
+
+  if (!area || !modal || !modalForm) {
+    toast('Fatura penceresi açılamadı.');
+    return;
+  }
+
+  let placeholder = $(placeholderId);
+
+  if (!placeholder) {
+    placeholder = document.createElement('div');
+    placeholder.id = placeholderId;
+    placeholder.className = 'hidden';
+    area.parentNode.insertBefore(
+      placeholder,
+      area
+    );
+  }
+
+  modalForm.innerHTML = '';
+  modalForm.appendChild(area);
+
+  area.classList.remove('hidden');
+  $('modalTitle').textContent = title;
+  modal.classList.add('invoice-modal-open');
+  modal.classList.remove('hidden');
+
+}
+
+
+function returnInvoiceForm(
+  areaId,
+  placeholderId
+) {
+
+  const area = $(areaId);
+  const placeholder = $(placeholderId);
+
+  if (area) {
+    area.classList.add('hidden');
+  }
+
+  if (
+    area &&
+    placeholder?.parentNode
+  ) {
+    placeholder.parentNode.insertBefore(
+      area,
+      placeholder.nextSibling
+    );
+  }
+
+  $('modal')?.classList.add('hidden');
+  $('modal')?.classList.remove('invoice-modal-open');
+
+}
+
+
+function openPurchaseInvoiceModal() {
 
   editingPurchaseId = null;
   purchaseItems = [];
@@ -5635,30 +5727,28 @@ function openPurchaseForm() {
       '💾 Alış Faturasını Kaydet';
   }
 
-  $('purchaseFormArea')?.classList.remove(
-    'hidden'
+  showInvoiceFormModal(
+    'purchaseFormArea',
+    'purchaseFormAreaPlaceholder',
+    'Yeni Alış Faturası'
   );
-
-  $('purchaseFormArea')?.scrollIntoView({
-    behavior: 'smooth',
-    block: 'start'
-  });
 
 }
 
 
-function closePurchaseForm() {
+function closePurchaseInvoiceModal() {
 
   editingPurchaseId = null;
 
-  $('purchaseFormArea')?.classList.add(
-    'hidden'
+  returnInvoiceForm(
+    'purchaseFormArea',
+    'purchaseFormAreaPlaceholder'
   );
 
 }
 
 
-function openSaleForm() {
+function openSaleInvoiceModal() {
 
   editingSaleId = null;
   saleItems = [];
@@ -5695,24 +5785,22 @@ function openSaleForm() {
       '💾 Satış Faturasını Kaydet';
   }
 
-  $('saleFormArea')?.classList.remove(
-    'hidden'
+  showInvoiceFormModal(
+    'saleFormArea',
+    'saleFormAreaPlaceholder',
+    'Yeni Satış Faturası'
   );
-
-  $('saleFormArea')?.scrollIntoView({
-    behavior: 'smooth',
-    block: 'start'
-  });
 
 }
 
 
-function closeSaleForm() {
+function closeSaleInvoiceModal() {
 
   editingSaleId = null;
 
-  $('saleFormArea')?.classList.add(
-    'hidden'
+  returnInvoiceForm(
+    'saleFormArea',
+    'saleFormAreaPlaceholder'
   );
 
 }
@@ -5931,17 +6019,16 @@ async function editPurchaseInvoice(id) {
 
     renderPurchaseItems();
 
-    $('purchaseFormArea')?.classList.remove('hidden');
-
     if ($('savePurchaseBtn')) {
       $('savePurchaseBtn').textContent =
         '💾 Alış Faturasını Güncelle';
     }
 
-    $('purchaseFormArea')?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start'
-    });
+    showInvoiceFormModal(
+      'purchaseFormArea',
+      'purchaseFormAreaPlaceholder',
+      'Alış Faturasını Değiştir'
+    );
 
   } catch (error) {
     console.error(error);
@@ -6011,17 +6098,16 @@ async function editSaleInvoice(id) {
 
     renderSaleItems();
 
-    $('saleFormArea')?.classList.remove('hidden');
-
     if ($('saveSaleBtn')) {
       $('saveSaleBtn').textContent =
         '💾 Satış Faturasını Güncelle';
     }
 
-    $('saleFormArea')?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start'
-    });
+    showInvoiceFormModal(
+      'saleFormArea',
+      'saleFormAreaPlaceholder',
+      'Satış Faturasını Değiştir'
+    );
 
   } catch (error) {
     console.error(error);
@@ -6327,16 +6413,16 @@ function deleteSaleInvoice(id) {
 
 
 window.openPurchaseForm =
-  openPurchaseForm;
+  openPurchaseInvoiceModal;
 
 window.closePurchaseForm =
-  closePurchaseForm;
+  closePurchaseInvoiceModal;
 
 window.openSaleForm =
-  openSaleForm;
+  openSaleInvoiceModal;
 
 window.closeSaleForm =
-  closeSaleForm;
+  closeSaleInvoiceModal;
 
 
 /* =========================================================
@@ -6380,25 +6466,7 @@ document.addEventListener(
       $('modal')
     ) {
 
-      /*
-        Eğer satın alma formu açıksa
-        önce onu düzgün şekilde kapat.
-      */
-
-      if (
-        $('purchaseForm') &&
-        $('purchaseForm').closest(
-          '#modalForm'
-        )
-      ) {
-
-        closePurchaseForm();
-
-      } else {
-
-        closeModal();
-
-      }
+      closeModal();
 
     }
 
@@ -6418,20 +6486,7 @@ document.addEventListener(
       e.key === 'Escape'
     ) {
 
-      if (
-        $('purchaseForm') &&
-        $('purchaseForm').closest(
-          '#modalForm'
-        )
-      ) {
-
-        closePurchaseForm();
-
-      } else {
-
-        closeModal();
-
-      }
+      closeModal();
 
     }
 

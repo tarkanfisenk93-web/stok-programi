@@ -92,6 +92,10 @@ button {
   display: none;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -527,6 +531,20 @@ input[readonly] {
 
 .modal-box:has(.movement-summary) {
   max-width: 1100px;
+}
+
+.modal.invoice-modal-open .modal-box {
+  max-width: 1180px;
+}
+
+.modal.invoice-modal-open #purchaseFormArea,
+.modal.invoice-modal-open #saleFormArea {
+  display: block;
+}
+
+.modal.invoice-modal-open #purchaseFormArea > .panel-header,
+.modal.invoice-modal-open #saleFormArea > .panel-header {
+  display: none;
 }
 
 .item-remove {

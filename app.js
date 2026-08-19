@@ -10,16 +10,23 @@ let purchaseItems = [];
 let saleItems = [];
 
 let editingPurchaseId = null;
+let editingSaleId = null;
 
 const $ = id => document.getElementById(id);
 
 const num = v => {
   if (typeof v === 'number') return v;
 
-  const s = String(v ?? '')
-    .trim()
-    .replace(/\./g, '')
-    .replace(',', '.');
+  let s = String(v ?? '')
+    .trim();
+
+  if (s.includes(',') && s.includes('.')) {
+    s = s
+      .replace(/\./g, '')
+      .replace(',', '.');
+  } else if (s.includes(',')) {
+    s = s.replace(',', '.');
+  }
 
   return Number(s || 0);
 };
@@ -36,9 +43,9 @@ const esc = v =>
     .replaceAll("'", '&#039;');
 
 const currencySymbols = {
-  TRY: '₺',
+  TRY: 'â‚º',
   USD: '$',
-  EUR: '€'
+  EUR: 'â‚¬'
 };
 
 const currencyNames = {
@@ -87,7 +94,7 @@ function toast(msg) {
 
 
 /* =========================================================
-   MENÜ
+   MENÃœ
 ========================================================= */
 
 function setupNavigation() {
@@ -112,10 +119,10 @@ function setupNavigation() {
 
       const titles = {
         dashboard: 'Ana Sayfa',
-        products: 'Ürünler',
-        purchase: 'Satın Alma',
-        sales: 'Satış',
-        parties: 'Cari / Müşteriler',
+        products: 'ÃœrÃ¼nler',
+        purchase: 'SatÄ±n Alma',
+        sales: 'SatÄ±ÅŸ',
+        parties: 'Cari / MÃ¼ÅŸteriler',
         documents: 'Faturalar',
         reports: 'Raporlar'
       };
@@ -137,14 +144,16 @@ function setupNavigation() {
 
         preparePurchasePage();
 
-        ensurePurchaseLayout();
+        closePurchaseForm();
 
-        hidePurchaseForm();
+        renderPurchaseInvoices();
 
       }
 
       if (page === 'sales') {
         prepareSalePage();
+        closeSaleForm();
+        renderSaleInvoices();
       }
 
       if (page === 'parties') {
@@ -180,7 +189,7 @@ function setDefaultDates() {
 
 
 /* =========================================================
-   VERİ
+   VERÄ°
 ========================================================= */
 
 async function loadAll() {
@@ -246,24 +255,18 @@ async function loadAll() {
     renderMovements();
     renderDocuments();
     renderReports();
+    renderPurchaseInvoices();
+    renderSaleInvoices();
 
     preparePurchasePage();
     prepareSalePage();
-
-    setTimeout(() => {
-
-      ensurePurchaseLayout();
-
-      hidePurchaseForm();
-
-    }, 100);
 
   } catch (e) {
 
     console.error(e);
 
     toast(
-      'Veriler yüklenemedi: ' +
+      'Veriler yÃ¼klenemedi: ' +
       e.message
     );
 
@@ -383,7 +386,7 @@ function renderDashboard() {
           <thead>
             <tr>
               <th>Kod</th>
-              <th>Ürün</th>
+              <th>ÃœrÃ¼n</th>
               <th>Mevcut</th>
               <th>Kritik Seviye</th>
             </tr>
@@ -424,7 +427,7 @@ function renderDashboard() {
 
 
 /* =========================================================
-   ÜRÜNLER
+   ÃœRÃœNLER
 ========================================================= */
 
 function renderProducts() {
@@ -453,7 +456,7 @@ function renderProducts() {
   if (!list.length) {
 
     c.innerHTML =
-      '<div class="empty">Ürün bulunamadı.</div>';
+      '<div class="empty">ÃœrÃ¼n bulunamadÄ±.</div>';
 
     return;
   }
@@ -466,13 +469,13 @@ function renderProducts() {
 
         <tr>
           <th>Kod</th>
-          <th>Ürün</th>
+          <th>ÃœrÃ¼n</th>
           <th>Stok</th>
           <th>Kritik</th>
-          <th>Alış</th>
-          <th>Satış</th>
+          <th>AlÄ±ÅŸ</th>
+          <th>SatÄ±ÅŸ</th>
           <th>Durum</th>
-          <th>İşlem</th>
+          <th>Ä°ÅŸlem</th>
         </tr>
 
       </thead>
@@ -537,7 +540,7 @@ function renderProducts() {
                   class="secondary"
                   onclick="editProduct('${p.id}')"
                 >
-                  Düzenle
+                  DÃ¼zenle
                 </button>
 
                 <button
@@ -581,8 +584,8 @@ function openProductForm(id = null) {
   openModal(
 
     id
-      ? 'Ürün Düzenle'
-      : 'Yeni Ürün',
+      ? 'ÃœrÃ¼n DÃ¼zenle'
+      : 'Yeni ÃœrÃ¼n',
 
     `
 
@@ -591,7 +594,7 @@ function openProductForm(id = null) {
         <div class="form-group">
 
           <label>
-            Ürün Kodu
+            ÃœrÃ¼n Kodu
           </label>
 
           <input
@@ -604,7 +607,7 @@ function openProductForm(id = null) {
         <div class="form-group">
 
           <label>
-            Ürün Adı
+            ÃœrÃ¼n AdÄ±
           </label>
 
           <input
@@ -631,7 +634,7 @@ function openProductForm(id = null) {
 
           ${id ? `
             <small class="field-help">
-              Stok miktarı satın alma ve satış faturalarından güncellenir.
+              Stok miktarÄ± satÄ±n alma ve satÄ±ÅŸ faturalarÄ±ndan gÃ¼ncellenir.
             </small>
           ` : ''}
 
@@ -655,7 +658,7 @@ function openProductForm(id = null) {
         <div class="form-group">
 
           <label>
-            Alış Fiyatı
+            AlÄ±ÅŸ FiyatÄ±
           </label>
 
           <input
@@ -670,7 +673,7 @@ function openProductForm(id = null) {
         <div class="form-group">
 
           <label>
-            Satış Fiyatı
+            SatÄ±ÅŸ FiyatÄ±
           </label>
 
           <input
@@ -690,7 +693,7 @@ function openProductForm(id = null) {
           class="secondary"
           onclick="closeModal()"
         >
-          Vazgeç
+          VazgeÃ§
         </button>
 
         <button
@@ -721,7 +724,7 @@ function openProductMovements(id) {
     products.find(p => p.id === id);
 
   if (!product) {
-    toast('Ürün bulunamadı.');
+    toast('ÃœrÃ¼n bulunamadÄ±.');
     return;
   }
 
@@ -744,26 +747,26 @@ function openProductMovements(id) {
 
     const documentType =
       m.source_type === 'purchase'
-        ? 'Satın Alma'
+        ? 'SatÄ±n Alma'
         : m.source_type === 'sale'
-          ? 'Satış'
-          : 'Başlangıç';
+          ? 'SatÄ±ÅŸ'
+          : 'BaÅŸlangÄ±Ã§';
 
     const date = document?.invoice_date || m.created_at;
 
     const description =
       m.source_type === 'purchase'
-        ? `${party?.name || 'Tedarikçi belirtilmedi'} firmasından satın alma`
+        ? `${party?.name || 'TedarikÃ§i belirtilmedi'} firmasÄ±ndan satÄ±n alma`
         : m.source_type === 'sale'
-          ? `${party?.name || 'Müşteri belirtilmedi'} firmasına satış`
-          : (m.note || 'Başlangıç stoğu');
+          ? `${party?.name || 'MÃ¼ÅŸteri belirtilmedi'} firmasÄ±na satÄ±ÅŸ`
+          : (m.note || 'BaÅŸlangÄ±Ã§ stoÄŸu');
 
     return `
       <tr>
         <td>${date ? new Date(date).toLocaleDateString('tr-TR') : '-'}</td>
         <td>
           <span class="badge ${m.type === 'in' ? 'badge-in' : 'badge-out'}">
-            ${m.type === 'in' ? 'Giriş' : 'Çıkış'}
+            ${m.type === 'in' ? 'GiriÅŸ' : 'Ã‡Ä±kÄ±ÅŸ'}
           </span>
         </td>
         <td>${num(m.quantity)}</td>
@@ -795,12 +798,12 @@ function openProductMovements(id) {
                 <th>Kaynak</th>
                 <th>Fatura No</th>
                 <th>Cari</th>
-                <th>Açıklama</th>
+                <th>AÃ§Ä±klama</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
           </table>
-        ` : '<div class="empty">Bu ürüne ait stok hareketi bulunamadı.</div>'}
+        ` : '<div class="empty">Bu Ã¼rÃ¼ne ait stok hareketi bulunamadÄ±.</div>'}
       </div>
 
       <div class="form-buttons">
@@ -852,7 +855,7 @@ async function saveProduct(id) {
   if (!data.code || !data.name) {
 
     toast(
-      'Ürün kodu ve adı zorunludur.'
+      'ÃœrÃ¼n kodu ve adÄ± zorunludur.'
     );
 
     return;
@@ -876,7 +879,7 @@ async function saveProduct(id) {
     closeModal();
 
     toast(
-      'Ürün kaydedildi.'
+      'ÃœrÃ¼n kaydedildi.'
     );
 
     await loadAll();
@@ -886,7 +889,7 @@ async function saveProduct(id) {
     console.error(e);
 
     toast(
-      'Ürün kaydedilemedi: ' +
+      'ÃœrÃ¼n kaydedilemedi: ' +
       e.message
     );
 
@@ -899,7 +902,7 @@ async function deleteProduct(id) {
 
   if (
     !confirm(
-      'Bu ürünü silmek istediğinize emin misiniz?'
+      'Bu Ã¼rÃ¼nÃ¼ silmek istediÄŸinize emin misiniz?'
     )
   ) return;
 
@@ -914,7 +917,7 @@ async function deleteProduct(id) {
     if (r.error) throw r.error;
 
     toast(
-      'Ürün silindi.'
+      'ÃœrÃ¼n silindi.'
     );
 
     await loadAll();
@@ -922,7 +925,7 @@ async function deleteProduct(id) {
   } catch (e) {
 
     toast(
-      'Ürün silinemedi. Hareket kaydı varsa silinemez.'
+      'ÃœrÃ¼n silinemedi. Hareket kaydÄ± varsa silinemez.'
     );
 
   }
@@ -931,16 +934,16 @@ async function deleteProduct(id) {
 
 
 /* =========================================================
-   CARİ
+   CARÄ°
 ========================================================= */
 
 function partyType(t) {
 
   return t === 'supplier'
-    ? 'Tedarikçi'
+    ? 'TedarikÃ§i'
     : t === 'both'
-      ? 'Müşteri + Tedarikçi'
-      : 'Müşteri';
+      ? 'MÃ¼ÅŸteri + TedarikÃ§i'
+      : 'MÃ¼ÅŸteri';
 
 }
 
@@ -955,7 +958,7 @@ function renderParties() {
   if (!parties.length) {
 
     c.innerHTML =
-      '<div class="empty">Henüz cari kaydı yok.</div>';
+      '<div class="empty">HenÃ¼z cari kaydÄ± yok.</div>';
 
     return;
   }
@@ -968,11 +971,11 @@ function renderParties() {
 
         <tr>
           <th>Unvan</th>
-          <th>Tür</th>
+          <th>TÃ¼r</th>
           <th>Telefon</th>
           <th>E-posta</th>
           <th>Vergi No</th>
-          <th>İşlem</th>
+          <th>Ä°ÅŸlem</th>
         </tr>
 
       </thead>
@@ -1009,7 +1012,7 @@ function renderParties() {
                 class="secondary"
                 onclick="editParty('${p.id}')"
               >
-                Düzenle
+                DÃ¼zenle
               </button>
 
               <button
@@ -1044,7 +1047,7 @@ function openPartyForm(id = null) {
   openModal(
 
     id
-      ? 'Cari Düzenle'
+      ? 'Cari DÃ¼zenle'
       : 'Yeni Cari',
 
     `
@@ -1080,7 +1083,7 @@ function openPartyForm(id = null) {
                   : ''
               }
             >
-              Müşteri
+              MÃ¼ÅŸteri
             </option>
 
             <option
@@ -1091,7 +1094,7 @@ function openPartyForm(id = null) {
                   : ''
               }
             >
-              Tedarikçi
+              TedarikÃ§i
             </option>
 
             <option
@@ -1102,7 +1105,7 @@ function openPartyForm(id = null) {
                   : ''
               }
             >
-              Müşteri + Tedarikçi
+              MÃ¼ÅŸteri + TedarikÃ§i
             </option>
 
           </select>
@@ -1168,7 +1171,7 @@ function openPartyForm(id = null) {
           class="secondary"
           onclick="closeModal()"
         >
-          Vazgeç
+          VazgeÃ§
         </button>
 
         <button
@@ -1276,7 +1279,7 @@ async function deleteParty(id) {
 
   if (
     !confirm(
-      'Bu cariyi silmek istediğinize emin misiniz?'
+      'Bu cariyi silmek istediÄŸinize emin misiniz?'
     )
   ) return;
 
@@ -1299,7 +1302,7 @@ async function deleteParty(id) {
   } catch (e) {
 
     toast(
-      'Bu cari kullanıldığı için silinemiyor.'
+      'Bu cari kullanÄ±ldÄ±ÄŸÄ± iÃ§in silinemiyor.'
     );
 
   }
@@ -1342,7 +1345,7 @@ function closeModal() {
 
 
 /* =========================================================
-   SEÇİMLER / DÖVİZ
+   SEÃ‡Ä°MLER / DÃ–VÄ°Z
 ========================================================= */
 
 function fillProductSelect(id) {
@@ -1352,7 +1355,7 @@ function fillProductSelect(id) {
   if (!s) return;
 
   s.innerHTML =
-    '<option value="">Ürün seçin...</option>' +
+    '<option value="">ÃœrÃ¼n seÃ§in...</option>' +
 
     products.map(p => `
 
@@ -1372,7 +1375,7 @@ function fillPartySelect(id, types) {
   if (!s) return;
 
   s.innerHTML =
-    '<option value="">Cari seçin...</option>' +
+    '<option value="">Cari seÃ§in...</option>' +
 
     parties
       .filter(
@@ -1505,7 +1508,7 @@ function ensureCurrencyUI(type) {
         type="number"
         min="0.000001"
         step="0.000001"
-        placeholder="Örn. 47,72"
+        placeholder="Ã–rn. 47,72"
         oninput="${type}Totals()"
       >
 
@@ -1577,7 +1580,7 @@ function ensureCurrencySummary(type) {
         margin-bottom:4px;
       "
     >
-      TL Karşılığı
+      TL KarÅŸÄ±lÄ±ÄŸÄ±
     </span>
 
     <strong
@@ -1610,6 +1613,15 @@ function currencyChanged(type) {
   const rate =
     $(prefix + 'ExchangeRate');
 
+  const rateLabel =
+    $(prefix + 'ExchangeRateLabel');
+
+  const priceInput =
+    $(prefix + 'Price');
+
+  const info =
+    $(prefix + 'CurrencyInfo');
+
   if (currency === 'TRY') {
 
     if (wrap) {
@@ -1620,10 +1632,35 @@ function currencyChanged(type) {
       rate.value = '';
     }
 
+    if (priceInput) {
+      priceInput.placeholder =
+        'Birim fiyat (TL)';
+    }
+
+    if (info) {
+      info.style.display = 'none';
+    }
+
   } else {
 
     if (wrap) {
       wrap.style.display = 'block';
+    }
+
+    if (rateLabel) {
+      rateLabel.textContent =
+        `1 ${currency} KaÃ§ TL?`;
+    }
+
+    if (priceInput) {
+      priceInput.placeholder =
+        `Birim fiyat (${currency})`;
+    }
+
+    if (info) {
+      info.style.display = 'block';
+      info.textContent =
+        `Birim fiyatlarÄ± ${currency} olarak girin. TL karÅŸÄ±lÄ±ÄŸÄ± yazdÄ±ÄŸÄ±nÄ±z kur Ã¼zerinden otomatik hesaplanÄ±r.`;
     }
 
   }
@@ -1698,7 +1735,7 @@ function prepareSalePage() {
 
 
 /* =========================================================
-   ALIŞ
+   ALIÅ
 ========================================================= */
 
 function addPurchaseItem() {
@@ -1724,7 +1761,7 @@ function addPurchaseItem() {
   if (!pid || q <= 0) {
 
     toast(
-      'Ürün ve miktar seçmelisiniz.'
+      'ÃœrÃ¼n ve miktar seÃ§melisiniz.'
     );
 
     return;
@@ -1733,7 +1770,7 @@ function addPurchaseItem() {
   if (price < 0 || isNaN(price)) {
 
     toast(
-      'Birim fiyatı kontrol edin.'
+      'Birim fiyatÄ± kontrol edin.'
     );
 
     return;
@@ -1749,7 +1786,7 @@ function addPurchaseItem() {
   if (!p) {
 
     toast(
-      'Seçilen ürün bulunamadı.'
+      'SeÃ§ilen Ã¼rÃ¼n bulunamadÄ±.'
     );
 
     return;
@@ -1784,7 +1821,7 @@ function addPurchaseItem() {
   renderPurchaseItems();
 
   toast(
-    'Ürün faturaya eklendi.'
+    'ÃœrÃ¼n faturaya eklendi.'
   );
 
 }
@@ -1861,6 +1898,22 @@ function calculatePurchaseTotals() {
         : 'block';
 
     setText(
+      'purchaseSubtotalTry',
+      money(
+        subtotal * rate,
+        'TRY'
+      )
+    );
+
+    setText(
+      'purchaseVatTotalTry',
+      money(
+        vatTotal * rate,
+        'TRY'
+      )
+    );
+
+    setText(
       'purchaseGrandTotalTry',
       money(
         total * rate,
@@ -1908,7 +1961,7 @@ function renderPurchaseItems() {
   if (!purchaseItems.length) {
 
     c.innerHTML =
-      '<div class="empty">Faturaya henüz ürün eklenmedi.</div>';
+      '<div class="empty">Faturaya henÃ¼z Ã¼rÃ¼n eklenmedi.</div>';
 
     calculatePurchaseTotals();
 
@@ -1923,12 +1976,12 @@ function renderPurchaseItems() {
 
         <tr>
           <th>#</th>
-          <th>Ürün</th>
+          <th>ÃœrÃ¼n</th>
           <th>Miktar</th>
           <th>Birim Fiyat</th>
           <th>KDV</th>
           <th>Matrah</th>
-          <th>KDV Tutarı</th>
+          <th>KDV TutarÄ±</th>
           <th>Toplam</th>
           <th></th>
         </tr>
@@ -2004,7 +2057,7 @@ function renderPurchaseItems() {
                   class="item-remove"
                   onclick="removePurchaseItem(${n})"
                 >
-                  ✕
+                  âœ•
                 </button>
 
               </td>
@@ -2043,7 +2096,7 @@ async function savePurchase() {
   if (!purchaseItems.length) {
 
     toast(
-      'Faturaya en az bir ürün ekleyin.'
+      'Faturaya en az bir Ã¼rÃ¼n ekleyin.'
     );
 
     return;
@@ -2077,7 +2130,23 @@ async function savePurchase() {
   ) {
 
     toast(
-      'USD/EUR faturası için fatura kurunu girin.'
+      'USD/EUR faturasÄ± iÃ§in fatura kurunu girin.'
+    );
+
+    return;
+  }
+
+  if (editingPurchaseId) {
+
+    await updatePurchaseInvoice(
+      editingPurchaseId,
+      {
+        partyId,
+        invoiceNo,
+        invoiceDate,
+        note,
+        totals
+      }
     );
 
     return;
@@ -2213,7 +2282,8 @@ async function savePurchase() {
               i.quantity,
 
             purchase_price:
-              i.unit_price
+              i.unit_price *
+              totals.exchangeRate
 
           })
           .eq(
@@ -2249,7 +2319,7 @@ async function savePurchase() {
               id,
 
             note:
-              `${parties.find(x => x.id === partyId)?.name || 'Tedarikçi belirtilmedi'} firmasından satın alma${invoiceNo ? ` - Fatura: ${invoiceNo}` : ''}`
+              `${parties.find(x => x.id === partyId)?.name || 'TedarikÃ§i belirtilmedi'} firmasÄ±ndan satÄ±n alma${invoiceNo ? ` - Fatura: ${invoiceNo}` : ''}`
 
           });
 
@@ -2260,7 +2330,7 @@ async function savePurchase() {
     }
 
     toast(
-      'Alış faturası başarıyla kaydedildi.'
+      'AlÄ±ÅŸ faturasÄ± baÅŸarÄ±yla kaydedildi.'
     );
 
     clearPurchase();
@@ -2272,7 +2342,7 @@ async function savePurchase() {
     console.error(e);
 
     toast(
-      'Alış faturası kaydedilemedi: ' +
+      'AlÄ±ÅŸ faturasÄ± kaydedilemedi: ' +
       e.message
     );
 
@@ -2324,7 +2394,7 @@ function clearPurchase() {
 
 
 /* =========================================================
-   SATIŞ
+   SATIÅ
 ========================================================= */
 
 function addSaleItem() {
@@ -2350,7 +2420,7 @@ function addSaleItem() {
   if (!pid || q <= 0) {
 
     toast(
-      'Ürün ve miktar seçmelisiniz.'
+      'ÃœrÃ¼n ve miktar seÃ§melisiniz.'
     );
 
     return;
@@ -2366,7 +2436,7 @@ function addSaleItem() {
   if (!p) {
 
     toast(
-      'Seçilen ürün bulunamadı.'
+      'SeÃ§ilen Ã¼rÃ¼n bulunamadÄ±.'
     );
 
     return;
@@ -2499,6 +2569,22 @@ function calculateSaleTotals() {
         : 'block';
 
     setText(
+      'saleSubtotalTry',
+      money(
+        subtotal * rate,
+        'TRY'
+      )
+    );
+
+    setText(
+      'saleVatTotalTry',
+      money(
+        vatTotal * rate,
+        'TRY'
+      )
+    );
+
+    setText(
       'saleGrandTotalTry',
       money(
         total * rate,
@@ -2546,7 +2632,7 @@ function renderSaleItems() {
   if (!saleItems.length) {
 
     c.innerHTML =
-      '<div class="empty">Faturaya henüz ürün eklenmedi.</div>';
+      '<div class="empty">Faturaya henÃ¼z Ã¼rÃ¼n eklenmedi.</div>';
 
     calculateSaleTotals();
 
@@ -2561,12 +2647,12 @@ function renderSaleItems() {
 
         <tr>
           <th>#</th>
-          <th>Ürün</th>
+          <th>ÃœrÃ¼n</th>
           <th>Miktar</th>
           <th>Birim Fiyat</th>
           <th>KDV</th>
           <th>Matrah</th>
-          <th>KDV Tutarı</th>
+          <th>KDV TutarÄ±</th>
           <th>Toplam</th>
           <th></th>
         </tr>
@@ -2642,7 +2728,7 @@ function renderSaleItems() {
                   class="item-remove"
                   onclick="removeSaleItem(${n})"
                 >
-                  ✕
+                  âœ•
                 </button>
 
               </td>
@@ -2681,42 +2767,45 @@ async function saveSale() {
   if (!saleItems.length) {
 
     toast(
-      'Faturaya en az bir ürün ekleyin.'
+      'Faturaya en az bir Ã¼rÃ¼n ekleyin.'
     );
 
     return;
   }
 
-  for (const i of saleItems) {
+  if (!editingSaleId) {
 
-    const p =
-      products.find(
-        x =>
-          x.id ===
-          i.product_id
-      );
+    for (const i of saleItems) {
 
-    if (!p) {
+      const p =
+        products.find(
+          x =>
+            x.id ===
+            i.product_id
+        );
 
-      toast(
-        'Ürün bulunamadı.'
-      );
+      if (!p) {
 
-      return;
+        toast(
+          'ÃœrÃ¼n bulunamadÄ±.'
+        );
+
+        return;
+      }
+
+      if (
+        i.quantity >
+        num(p.stock_quantity)
+      ) {
+
+        toast(
+          `${p.name} iÃ§in yeterli stok yok.`
+        );
+
+        return;
+      }
+
     }
-
-    if (
-      i.quantity >
-      num(p.stock_quantity)
-    ) {
-
-      toast(
-        `${p.name} için yeterli stok yok.`
-      );
-
-      return;
-    }
-
   }
 
   const partyId =
@@ -2747,7 +2836,23 @@ async function saveSale() {
   ) {
 
     toast(
-      'USD/EUR faturası için fatura kurunu girin.'
+      'USD/EUR faturasÄ± iÃ§in fatura kurunu girin.'
+    );
+
+    return;
+  }
+
+  if (editingSaleId) {
+
+    await updateSaleInvoice(
+      editingSaleId,
+      {
+        partyId,
+        invoiceNo,
+        invoiceDate,
+        note,
+        totals
+      }
     );
 
     return;
@@ -2878,7 +2983,7 @@ async function saveSale() {
       if (stock < 0) {
 
         throw new Error(
-          `${p.name} için stok yetersiz.`
+          `${p.name} iÃ§in stok yetersiz.`
         );
 
       }
@@ -2892,7 +2997,8 @@ async function saveSale() {
               stock,
 
             sale_price:
-              i.unit_price
+              i.unit_price *
+              totals.exchangeRate
 
           })
           .eq(
@@ -2928,7 +3034,7 @@ async function saveSale() {
               id,
 
             note:
-              `${parties.find(x => x.id === partyId)?.name || 'Müşteri belirtilmedi'} firmasına satış${invoiceNo ? ` - Fatura: ${invoiceNo}` : ''}`
+              `${parties.find(x => x.id === partyId)?.name || 'MÃ¼ÅŸteri belirtilmedi'} firmasÄ±na satÄ±ÅŸ${invoiceNo ? ` - Fatura: ${invoiceNo}` : ''}`
 
           });
 
@@ -2939,7 +3045,7 @@ async function saveSale() {
     }
 
     toast(
-      'Satış faturası başarıyla kaydedildi.'
+      'SatÄ±ÅŸ faturasÄ± baÅŸarÄ±yla kaydedildi.'
     );
 
     clearSale();
@@ -2951,7 +3057,7 @@ async function saveSale() {
     console.error(e);
 
     toast(
-      'Satış faturası kaydedilemedi: ' +
+      'SatÄ±ÅŸ faturasÄ± kaydedilemedi: ' +
       e.message
     );
 
@@ -2990,11 +3096,13 @@ function clearSale() {
 
   renderSaleItems();
 
+  closeSaleForm();
+
 }
 
 
 /* =========================================================
-   STOK HAREKETLERİ
+   STOK HAREKETLERÄ°
 ========================================================= */
 
 function renderMovements() {
@@ -3007,7 +3115,7 @@ function renderMovements() {
   if (!movements.length) {
 
     c.innerHTML =
-      '<div class="empty">Henüz stok hareketi yok.</div>';
+      '<div class="empty">HenÃ¼z stok hareketi yok.</div>';
 
     return;
   }
@@ -3020,10 +3128,10 @@ function renderMovements() {
 
         <tr>
           <th>Tarih</th>
-          <th>Ürün</th>
+          <th>ÃœrÃ¼n</th>
           <th>Hareket</th>
           <th>Miktar</th>
-          <th>Açıklama</th>
+          <th>AÃ§Ä±klama</th>
         </tr>
 
       </thead>
@@ -3073,8 +3181,8 @@ function renderMovements() {
 
                   ${
                     m.type === 'in'
-                      ? 'Giriş'
-                      : 'Çıkış'
+                      ? 'GiriÅŸ'
+                      : 'Ã‡Ä±kÄ±ÅŸ'
                   }
 
                 </span>
@@ -3117,13 +3225,13 @@ function openMovementForm() {
       <div class="form-group">
 
         <label>
-          Ürün
+          ÃœrÃ¼n
         </label>
 
         <select id="movementProduct">
 
           <option value="">
-            Ürün seçin...
+            ÃœrÃ¼n seÃ§in...
           </option>
 
           ${products.map(p => `
@@ -3149,11 +3257,11 @@ function openMovementForm() {
           <select id="movementType">
 
             <option value="in">
-              Stok Girişi
+              Stok GiriÅŸi
             </option>
 
             <option value="out">
-              Stok Çıkışı
+              Stok Ã‡Ä±kÄ±ÅŸÄ±
             </option>
 
           </select>
@@ -3180,7 +3288,7 @@ function openMovementForm() {
       <div class="form-group">
 
         <label>
-          Açıklama
+          AÃ§Ä±klama
         </label>
 
         <textarea
@@ -3195,7 +3303,7 @@ function openMovementForm() {
           class="secondary"
           onclick="closeModal()"
         >
-          Vazgeç
+          VazgeÃ§
         </button>
 
         <button
@@ -3237,7 +3345,7 @@ async function saveMovement() {
   if (!pid || q <= 0) {
 
     toast(
-      'Ürün ve miktar zorunludur.'
+      'ÃœrÃ¼n ve miktar zorunludur.'
     );
 
     return;
@@ -3339,32 +3447,28 @@ function invoiceDisplay(x) {
       'TRY'
     ).toUpperCase();
 
+  const rate =
+    num(x.exchange_rate) ||
+    1;
+
   return {
 
     currency:
       c,
 
-    rate:
-      num(x.exchange_rate) ||
-      1,
+    rate,
 
     subtotalTry:
-      num(
-        x.subtotal_try ??
-        x.subtotal
-      ),
+      num(x.subtotal_try) ||
+      num(x.subtotal) * rate,
 
     vatTry:
-      num(
-        x.vat_amount_try ??
-        x.vat_amount
-      ),
+      num(x.vat_amount_try) ||
+      num(x.vat_amount) * rate,
 
     totalTry:
-      num(
-        x.total_try ??
-        x.total
-      )
+      num(x.total_try) ||
+      num(x.total) * rate
 
   };
 
@@ -3383,14 +3487,14 @@ function renderDocuments() {
     ...purchases.map(
       p => ({
         x: p,
-        t: 'Alış'
+        t: 'AlÄ±ÅŸ'
       })
     ),
 
     ...sales.map(
       s => ({
         x: s,
-        t: 'Satış'
+        t: 'SatÄ±ÅŸ'
       })
     )
 
@@ -3399,7 +3503,7 @@ function renderDocuments() {
   if (!rows.length) {
 
     c.innerHTML =
-      '<div class="empty">Henüz fatura kaydı yok.</div>';
+      '<div class="empty">HenÃ¼z fatura kaydÄ± yok.</div>';
 
     return;
   }
@@ -3413,7 +3517,7 @@ function renderDocuments() {
         font-size:13px;
       "
     >
-      💡 Fatura detayını görmek için satıra tıklayın.
+      ğŸ’¡ Fatura detayÄ±nÄ± gÃ¶rmek iÃ§in satÄ±ra tÄ±klayÄ±n.
     </div>
 
     <table>
@@ -3423,7 +3527,7 @@ function renderDocuments() {
         <tr>
           <th>Fatura No</th>
           <th>Tarih</th>
-          <th>Tür</th>
+          <th>TÃ¼r</th>
           <th>Cari</th>
           <th>Para Birimi</th>
           <th>Genel Toplam</th>
@@ -3534,7 +3638,7 @@ async function showInvoiceDetail(
 ) {
 
   const isPurchase =
-    type === 'Alış';
+    type === 'AlÄ±ÅŸ';
 
   const table =
     isPurchase
@@ -3623,7 +3727,7 @@ async function showInvoiceDetail(
                 )}
                 -
                 ${esc(
-                  p?.name || 'Ürün'
+                  p?.name || 'ÃœrÃ¼n'
                 )}
               </td>
 
@@ -3682,9 +3786,9 @@ async function showInvoiceDetail(
 
       `${
         isPurchase
-          ? 'Alış'
-          : 'Satış'
-      } Faturası Detayı`,
+          ? 'AlÄ±ÅŸ'
+          : 'SatÄ±ÅŸ'
+      } FaturasÄ± DetayÄ±`,
 
       `
 
@@ -3803,7 +3907,7 @@ async function showInvoiceDetail(
 
               <tr>
                 <th>#</th>
-                <th>Ürün</th>
+                <th>ÃœrÃ¼n</th>
                 <th>Miktar</th>
                 <th>Birim Fiyat</th>
                 <th>KDV</th>
@@ -3826,7 +3930,7 @@ async function showInvoiceDetail(
                       colspan="8"
                       style="text-align:center"
                     >
-                      Kalem bulunamadı.
+                      Kalem bulunamadÄ±.
                     </td>
 
                   </tr>
@@ -3903,7 +4007,7 @@ async function showInvoiceDetail(
                   "
                 >
 
-                  TL Karşılığı:
+                  TL KarÅŸÄ±lÄ±ÄŸÄ±:
 
                   <strong>
                     ${money(
@@ -3934,7 +4038,7 @@ async function showInvoiceDetail(
               >
 
                 <strong>
-                  Açıklama
+                  AÃ§Ä±klama
                 </strong>
 
                 <div
@@ -3973,7 +4077,7 @@ async function showInvoiceDetail(
     console.error(e);
 
     toast(
-      'Fatura detayı açılamadı: ' +
+      'Fatura detayÄ± aÃ§Ä±lamadÄ±: ' +
       e.message
     );
 
@@ -4065,7 +4169,7 @@ function renderReports() {
     <div class="report-row">
 
       <span>
-        Toplam alış faturası
+        Toplam alÄ±ÅŸ faturasÄ±
       </span>
 
       <strong>
@@ -4077,7 +4181,7 @@ function renderReports() {
     <div class="report-row">
 
       <span>
-        Toplam satış faturası
+        Toplam satÄ±ÅŸ faturasÄ±
       </span>
 
       <strong>
@@ -4089,7 +4193,7 @@ function renderReports() {
     <div class="report-row">
 
       <span>
-        Toplam alış (TL)
+        Toplam alÄ±ÅŸ (TL)
       </span>
 
       <strong>
@@ -4101,7 +4205,7 @@ function renderReports() {
     <div class="report-row">
 
       <span>
-        Toplam satış (TL)
+        Toplam satÄ±ÅŸ (TL)
       </span>
 
       <strong>
@@ -4113,7 +4217,7 @@ function renderReports() {
     <div class="report-row">
 
       <span>
-        Alış KDV (TL)
+        AlÄ±ÅŸ KDV (TL)
       </span>
 
       <strong>
@@ -4125,7 +4229,7 @@ function renderReports() {
     <div class="report-row">
 
       <span>
-        Satış KDV (TL)
+        SatÄ±ÅŸ KDV (TL)
       </span>
 
       <strong>
@@ -4137,7 +4241,7 @@ function renderReports() {
     <div class="report-row">
 
       <span>
-        Satış - Alış (TL)
+        SatÄ±ÅŸ - AlÄ±ÅŸ (TL)
       </span>
 
       <strong
@@ -4234,7 +4338,7 @@ function exportPurchasesCSV() {
     [
       'Fatura No',
       'Tarih',
-      'Tedarikçi',
+      'TedarikÃ§i',
       'Para Birimi',
       'Kur',
       'Matrah',
@@ -4288,7 +4392,7 @@ function exportSalesCSV() {
     [
       'Fatura No',
       'Tarih',
-      'Müşteri',
+      'MÃ¼ÅŸteri',
       'Para Birimi',
       'Kur',
       'Matrah',
@@ -4337,9 +4441,9 @@ function exportSalesCSV() {
 
 /* =========================================================
    SATIN ALMA SAYFASI
-   ÖNEMLİ:
-   FORM SAYFADA GİZLİDİR.
-   SADECE + FATURA EKLE TIKLANINCA AÇILIR.
+   Ã–NEMLÄ°:
+   FORM SAYFADA GÄ°ZLÄ°DÄ°R.
+   SADECE + FATURA EKLE TIKLANINCA AÃ‡ILIR.
 ========================================================= */
 
 (function () {
@@ -4352,7 +4456,7 @@ function exportSalesCSV() {
     if (!form) return;
 
     /*
-      Form modal içinde DEĞİLSE
+      Form modal iÃ§inde DEÄÄ°LSE
       mutlaka gizle.
     */
 
@@ -4461,7 +4565,7 @@ function exportSalesCSV() {
             <h2
               style="margin:0"
             >
-              📥 Satın Alma
+              ğŸ“¥ SatÄ±n Alma
             </h2>
 
             <p
@@ -4470,7 +4574,7 @@ function exportSalesCSV() {
                 color:#6b7280;
               "
             >
-              Kayıtlı alış faturalarınızı görüntüleyin
+              KayÄ±tlÄ± alÄ±ÅŸ faturalarÄ±nÄ±zÄ± gÃ¶rÃ¼ntÃ¼leyin
               ve yeni fatura ekleyin.
             </p>
 
@@ -4520,8 +4624,8 @@ function exportSalesCSV() {
 
 
     /*
-      Form modal dışında kaldığında
-      sayfada görünmesini kesin olarak engelle.
+      Form modal dÄ±ÅŸÄ±nda kaldÄ±ÄŸÄ±nda
+      sayfada gÃ¶rÃ¼nmesini kesin olarak engelle.
     */
 
     if (
@@ -4575,7 +4679,7 @@ function exportSalesCSV() {
         >
 
           <h2 style="margin:0">
-            📋 Alış Faturaları
+            ğŸ“‹ AlÄ±ÅŸ FaturalarÄ±
           </h2>
 
           <button
@@ -4583,7 +4687,7 @@ function exportSalesCSV() {
             type="button"
             onclick="exportPurchasesCSV()"
           >
-            CSV Dışa Aktar
+            CSV DÄ±ÅŸa Aktar
           </button>
 
         </div>
@@ -4595,7 +4699,7 @@ function exportSalesCSV() {
             text-align:center;
           "
         >
-          Henüz alış faturası kaydı yok.
+          HenÃ¼z alÄ±ÅŸ faturasÄ± kaydÄ± yok.
         </div>
 
       `;
@@ -4617,7 +4721,7 @@ function exportSalesCSV() {
       >
 
         <h2 style="margin:0">
-          📋 Alış Faturaları
+          ğŸ“‹ AlÄ±ÅŸ FaturalarÄ±
         </h2>
 
         <button
@@ -4625,7 +4729,7 @@ function exportSalesCSV() {
           type="button"
           onclick="exportPurchasesCSV()"
         >
-          CSV Dışa Aktar
+          CSV DÄ±ÅŸa Aktar
         </button>
 
       </div>
@@ -4641,7 +4745,7 @@ function exportSalesCSV() {
             <tr>
               <th>Fatura No</th>
               <th>Tarih</th>
-              <th>Tedarikçi</th>
+              <th>TedarikÃ§i</th>
               <th>Para Birimi</th>
               <th>Matrah</th>
               <th>KDV</th>
@@ -4775,7 +4879,7 @@ function exportSalesCSV() {
     ) {
 
       toast(
-        'Yeni fatura formu bulunamadı.'
+        'Yeni fatura formu bulunamadÄ±.'
       );
 
       return;
@@ -4790,7 +4894,7 @@ function exportSalesCSV() {
 
 
     /*
-      Önce formu modal içine taşıyoruz.
+      Ã–nce formu modal iÃ§ine taÅŸÄ±yoruz.
     */
 
     modalForm.innerHTML =
@@ -4802,15 +4906,15 @@ function exportSalesCSV() {
 
 
     /*
-      Formun görünmesini burada
-      özellikle açıyoruz.
+      Formun gÃ¶rÃ¼nmesini burada
+      Ã¶zellikle aÃ§Ä±yoruz.
     */
 
     showPurchaseForm();
 
 
     modalTitle.textContent =
-      'Yeni Alış Faturası';
+      'Yeni AlÄ±ÅŸ FaturasÄ±';
 
     modal.classList.remove(
       'hidden'
@@ -4824,7 +4928,7 @@ function exportSalesCSV() {
 
     setText(
       'purchaseFormTitle',
-      'Yeni Alış Faturası'
+      'Yeni AlÄ±ÅŸ FaturasÄ±'
     );
 
 
@@ -4834,7 +4938,7 @@ function exportSalesCSV() {
     if (saveBtn) {
 
       saveBtn.textContent =
-        '💾 Alış Faturasını Kaydet';
+        'ğŸ’¾ AlÄ±ÅŸ FaturasÄ±nÄ± Kaydet';
 
     }
 
@@ -4866,7 +4970,7 @@ function exportSalesCSV() {
 
 
     /*
-      Modalı kapat.
+      ModalÄ± kapat.
     */
 
     if (modal) {
@@ -4879,7 +4983,7 @@ function exportSalesCSV() {
 
 
     /*
-      Formu modal dışına geri taşı.
+      Formu modal dÄ±ÅŸÄ±na geri taÅŸÄ±.
     */
 
     if (
@@ -4985,7 +5089,7 @@ function exportSalesCSV() {
                     -
 
                     ${esc(
-                      product?.name || 'Ürün'
+                      product?.name || 'ÃœrÃ¼n'
                     )}
 
                   </td>
@@ -5049,7 +5153,7 @@ function exportSalesCSV() {
 
       openModal(
 
-        'Alış Faturası Detayı',
+        'AlÄ±ÅŸ FaturasÄ± DetayÄ±',
 
         `
 
@@ -5095,7 +5199,7 @@ function exportSalesCSV() {
             <div>
 
               <label>
-                Tedarikçi
+                TedarikÃ§i
               </label>
 
               <strong>
@@ -5122,12 +5226,12 @@ function exportSalesCSV() {
                 <tr>
 
                   <th>#</th>
-                  <th>Ürün</th>
+                  <th>ÃœrÃ¼n</th>
                   <th>Miktar</th>
                   <th>Birim Fiyat</th>
                   <th>KDV</th>
                   <th>Matrah</th>
-                  <th>KDV Tutarı</th>
+                  <th>KDV TutarÄ±</th>
                   <th>Toplam</th>
 
                 </tr>
@@ -5147,7 +5251,7 @@ function exportSalesCSV() {
                         colspan="8"
                         style="text-align:center"
                       >
-                        Kalem bulunamadı.
+                        Kalem bulunamadÄ±.
                       </td>
 
                     </tr>
@@ -5230,7 +5334,7 @@ function exportSalesCSV() {
                 >
 
                   <strong>
-                    Açıklama
+                    AÃ§Ä±klama
                   </strong>
 
                   <div
@@ -5274,7 +5378,7 @@ function exportSalesCSV() {
       console.error(e);
 
       toast(
-        'Fatura detayı açılamadı: ' +
+        'Fatura detayÄ± aÃ§Ä±lamadÄ±: ' +
         e.message
       );
 
@@ -5303,7 +5407,7 @@ function exportSalesCSV() {
 
 
   /*
-    Sayfa ilk açıldığında formu
+    Sayfa ilk aÃ§Ä±ldÄ±ÄŸÄ±nda formu
     kesinlikle gizle.
   */
 
@@ -5324,7 +5428,7 @@ function exportSalesCSV() {
 
 
   /*
-    Satın Alma menüsüne her girişte
+    SatÄ±n Alma menÃ¼sÃ¼ne her giriÅŸte
     formu tekrar gizle.
   */
 
@@ -5360,7 +5464,883 @@ function exportSalesCSV() {
 
 
 /* =========================================================
-   BAŞLAT
+   ALIÅ / SATIÅ FATURA LÄ°STELERÄ°
+========================================================= */
+
+function formatInvoiceDate(value) {
+
+  if (!value) return '-';
+
+  const parts =
+    String(value)
+      .slice(0, 10)
+      .split('-');
+
+  if (parts.length !== 3) {
+    return esc(value);
+  }
+
+  return `${parts[2]}.${parts[1]}.${parts[0]}`;
+
+}
+
+
+function renderInvoiceList(
+  containerId,
+  invoices,
+  type
+) {
+
+  const c = $(containerId);
+
+  if (!c) return;
+
+  const isPurchase =
+    type === 'AlÄ±ÅŸ';
+
+  if (!invoices.length) {
+
+    c.innerHTML = `
+      <div class="empty">
+        HenÃ¼z kayÄ±tlÄ± ${isPurchase ? 'satÄ±n alma' : 'satÄ±ÅŸ'} faturasÄ± yok.
+      </div>
+    `;
+
+    return;
+  }
+
+  c.innerHTML = `
+    <div class="invoice-list-help">
+      FaturayÄ± gÃ¶rÃ¼ntÃ¼leyebilir, deÄŸiÅŸtirebilir veya silebilirsiniz.
+    </div>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th>Fatura No</th>
+            <th>Ãœnvan</th>
+            <th>Fatura TÃ¼rÃ¼</th>
+            <th>Kur</th>
+            <th>Matrah</th>
+            <th>KDV</th>
+            <th>Toplam Fatura TutarÄ±</th>
+            <th>TL KarÅŸÄ±lÄ±ÄŸÄ±</th>
+            <th>Ä°ÅŸlem</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${invoices.map(invoice => {
+
+            const party = parties.find(
+              x => String(x.id) === String(invoice.party_id)
+            );
+
+            const display =
+              invoiceDisplay(invoice);
+
+            return `
+              <tr>
+                <td>${formatInvoiceDate(invoice.invoice_date)}</td>
+                <td><strong>${esc(invoice.invoice_no || '-')}</strong></td>
+                <td>${esc(party?.name || '-')}</td>
+                <td>
+                  ${display.currency === 'TRY' ? 'TL Fatura' : `DÃ¶viz (${display.currency})`}
+                </td>
+                <td>
+                  ${display.currency === 'TRY' ? '-' : `1 ${display.currency} = ${moneyCode(display.rate, 'TRY')}`}
+                </td>
+                <td>${money(invoice.subtotal, display.currency)}</td>
+                <td>${money(invoice.vat_amount, display.currency)}</td>
+                <td>
+                  <strong>${money(invoice.total, display.currency)}</strong>
+                </td>
+                <td>
+                  <strong>${money(display.totalTry, 'TRY')}</strong>
+                </td>
+                <td>
+                  <div class="table-actions">
+                    <button
+                      class="secondary"
+                      type="button"
+                      onclick="showInvoiceDetail('${type}','${invoice.id}')"
+                    >
+                      GÃ¶ster
+                    </button>
+
+                    <button
+                      class="edit-button"
+                      type="button"
+                      onclick="${isPurchase ? 'editPurchaseInvoice' : 'editSaleInvoice'}('${invoice.id}')"
+                    >
+                      DeÄŸiÅŸtir
+                    </button>
+
+                    <button
+                      class="danger"
+                      type="button"
+                      onclick="${isPurchase ? 'deletePurchaseInvoice' : 'deleteSaleInvoice'}('${invoice.id}')"
+                    >
+                      Sil
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `;
+
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+}
+
+
+function renderPurchaseInvoices() {
+
+  renderInvoiceList(
+    'purchaseInvoicesTable',
+    purchases,
+    'AlÄ±ÅŸ'
+  );
+
+}
+
+
+function renderSaleInvoices() {
+
+  renderInvoiceList(
+    'saleInvoicesTable',
+    sales,
+    'SatÄ±ÅŸ'
+  );
+
+}
+
+
+function openPurchaseForm() {
+
+  editingPurchaseId = null;
+  purchaseItems = [];
+
+  clearPurchaseFields();
+  preparePurchasePage();
+  renderPurchaseItems();
+
+  if ($('savePurchaseBtn')) {
+    $('savePurchaseBtn').textContent =
+      'ğŸ’¾ AlÄ±ÅŸ FaturasÄ±nÄ± Kaydet';
+  }
+
+  $('purchaseFormArea')?.classList.remove(
+    'hidden'
+  );
+
+  $('purchaseFormArea')?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start'
+  });
+
+}
+
+
+function closePurchaseForm() {
+
+  editingPurchaseId = null;
+
+  $('purchaseFormArea')?.classList.add(
+    'hidden'
+  );
+
+}
+
+
+function openSaleForm() {
+
+  editingSaleId = null;
+  saleItems = [];
+
+  if ($('saleInvoiceNo')) {
+    $('saleInvoiceNo').value = '';
+  }
+
+  if ($('saleDate')) {
+    $('saleDate').value = today();
+  }
+
+  if ($('saleParty')) {
+    $('saleParty').value = '';
+  }
+
+  if ($('saleNote')) {
+    $('saleNote').value = '';
+  }
+
+  if ($('saleCurrency')) {
+    $('saleCurrency').value = 'TRY';
+  }
+
+  if ($('saleExchangeRate')) {
+    $('saleExchangeRate').value = '';
+  }
+
+  prepareSalePage();
+  renderSaleItems();
+
+  if ($('saveSaleBtn')) {
+    $('saveSaleBtn').textContent =
+      'ğŸ’¾ SatÄ±ÅŸ FaturasÄ±nÄ± Kaydet';
+  }
+
+  $('saleFormArea')?.classList.remove(
+    'hidden'
+  );
+
+  $('saleFormArea')?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start'
+  });
+
+}
+
+
+function closeSaleForm() {
+
+  editingSaleId = null;
+
+  $('saleFormArea')?.classList.add(
+    'hidden'
+  );
+
+}
+
+
+function invoiceItemRows(
+  type,
+  invoiceId,
+  items
+) {
+
+  const isPurchase =
+    type === 'purchase';
+
+  return items.map(item => {
+
+    const subtotal =
+      num(item.quantity) *
+      num(item.unit_price);
+
+    const vatAmount =
+      subtotal *
+      num(item.vat_rate) /
+      100;
+
+    return {
+      [isPurchase ? 'purchase_id' : 'sale_id']:
+        invoiceId,
+      product_id: item.product_id,
+      quantity: num(item.quantity),
+      unit_price: num(item.unit_price),
+      vat_rate: num(item.vat_rate),
+      line_subtotal: subtotal,
+      vat_amount: vatAmount,
+      line_total: subtotal + vatAmount
+    };
+
+  });
+
+}
+
+
+function calculateStockChanges(
+  oldItems,
+  newItems,
+  type
+) {
+
+  const changes = new Map();
+
+  const add = (productId, quantity) => {
+    changes.set(
+      productId,
+      (changes.get(productId) || 0) +
+      quantity
+    );
+  };
+
+  oldItems.forEach(item => {
+    add(
+      item.product_id,
+      type === 'purchase'
+        ? -num(item.quantity)
+        : num(item.quantity)
+    );
+  });
+
+  newItems.forEach(item => {
+    add(
+      item.product_id,
+      type === 'purchase'
+        ? num(item.quantity)
+        : -num(item.quantity)
+    );
+  });
+
+  return changes;
+
+}
+
+
+function validateStockChanges(changes) {
+
+  for (const [productId, change] of changes) {
+
+    const product = products.find(
+      x => String(x.id) === String(productId)
+    );
+
+    if (!product) {
+      throw new Error('Faturadaki Ã¼rÃ¼nlerden biri bulunamadÄ±.');
+    }
+
+    if (
+      num(product.stock_quantity) +
+      change < 0
+    ) {
+      throw new Error(
+        `${product.name} iÃ§in iÅŸlem sonrasÄ± stok eksiye dÃ¼ÅŸeceÄŸi iÃ§in fatura deÄŸiÅŸtirilemez veya silinemez.`
+      );
+    }
+
+  }
+
+}
+
+
+async function applyStockChanges(
+  changes,
+  newItems = [],
+  priceField = null,
+  exchangeRate = 1
+) {
+
+  const prices = new Map();
+
+  newItems.forEach(item => {
+    prices.set(
+      item.product_id,
+      num(item.unit_price) *
+      num(exchangeRate || 1)
+    );
+  });
+
+  for (const [productId, change] of changes) {
+
+    const product = products.find(
+      x => String(x.id) === String(productId)
+    );
+
+    const update = {
+      stock_quantity:
+        num(product.stock_quantity) +
+        change
+    };
+
+    if (
+      priceField &&
+      prices.has(productId)
+    ) {
+      update[priceField] =
+        prices.get(productId);
+    }
+
+    const result = await db
+      .from('products')
+      .update(update)
+      .eq('id', productId);
+
+    if (result.error) {
+      throw result.error;
+    }
+
+  }
+
+}
+
+
+async function editPurchaseInvoice(id) {
+
+  try {
+
+    const invoice = purchases.find(
+      x => String(x.id) === String(id)
+    );
+
+    if (!invoice) {
+      throw new Error('AlÄ±ÅŸ faturasÄ± bulunamadÄ±.');
+    }
+
+    const result = await db
+      .from('purchase_items')
+      .select('*')
+      .eq('purchase_id', id);
+
+    if (result.error) throw result.error;
+
+    editingPurchaseId = id;
+
+    purchaseItems = (result.data || []).map(item => {
+      const product = products.find(
+        x => String(x.id) === String(item.product_id)
+      );
+
+      return {
+        product_id: item.product_id,
+        product_name: product?.name || 'ÃœrÃ¼n',
+        code: product?.code || '-',
+        quantity: num(item.quantity),
+        unit_price: num(item.unit_price),
+        vat_rate: num(item.vat_rate)
+      };
+    });
+
+    preparePurchasePage();
+
+    $('purchaseInvoiceNo').value =
+      invoice.invoice_no || '';
+    $('purchaseDate').value =
+      invoice.invoice_date || today();
+    $('purchaseParty').value =
+      invoice.party_id || '';
+    $('purchaseNote').value =
+      invoice.note || '';
+    $('purchaseCurrency').value =
+      (invoice.currency || 'TRY').toUpperCase();
+
+    currencyChanged('purchase');
+
+    if ($('purchaseExchangeRate')) {
+      $('purchaseExchangeRate').value =
+        (invoice.currency || 'TRY').toUpperCase() === 'TRY'
+          ? ''
+          : num(invoice.exchange_rate);
+    }
+
+    renderPurchaseItems();
+
+    $('purchaseFormArea')?.classList.remove('hidden');
+
+    if ($('savePurchaseBtn')) {
+      $('savePurchaseBtn').textContent =
+        'ğŸ’¾ AlÄ±ÅŸ FaturasÄ±nÄ± GÃ¼ncelle';
+    }
+
+    $('purchaseFormArea')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+
+  } catch (error) {
+    console.error(error);
+    toast('Fatura deÄŸiÅŸiklik iÃ§in aÃ§Ä±lamadÄ±: ' + error.message);
+  }
+
+}
+
+
+async function editSaleInvoice(id) {
+
+  try {
+
+    const invoice = sales.find(
+      x => String(x.id) === String(id)
+    );
+
+    if (!invoice) {
+      throw new Error('SatÄ±ÅŸ faturasÄ± bulunamadÄ±.');
+    }
+
+    const result = await db
+      .from('sale_items')
+      .select('*')
+      .eq('sale_id', id);
+
+    if (result.error) throw result.error;
+
+    editingSaleId = id;
+
+    saleItems = (result.data || []).map(item => {
+      const product = products.find(
+        x => String(x.id) === String(item.product_id)
+      );
+
+      return {
+        product_id: item.product_id,
+        product_name: product?.name || 'ÃœrÃ¼n',
+        code: product?.code || '-',
+        quantity: num(item.quantity),
+        unit_price: num(item.unit_price),
+        vat_rate: num(item.vat_rate)
+      };
+    });
+
+    prepareSalePage();
+
+    $('saleInvoiceNo').value =
+      invoice.invoice_no || '';
+    $('saleDate').value =
+      invoice.invoice_date || today();
+    $('saleParty').value =
+      invoice.party_id || '';
+    $('saleNote').value =
+      invoice.note || '';
+    $('saleCurrency').value =
+      (invoice.currency || 'TRY').toUpperCase();
+
+    currencyChanged('sale');
+
+    if ($('saleExchangeRate')) {
+      $('saleExchangeRate').value =
+        (invoice.currency || 'TRY').toUpperCase() === 'TRY'
+          ? ''
+          : num(invoice.exchange_rate);
+    }
+
+    renderSaleItems();
+
+    $('saleFormArea')?.classList.remove('hidden');
+
+    if ($('saveSaleBtn')) {
+      $('saveSaleBtn').textContent =
+        'ğŸ’¾ SatÄ±ÅŸ FaturasÄ±nÄ± GÃ¼ncelle';
+    }
+
+    $('saleFormArea')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+
+  } catch (error) {
+    console.error(error);
+    toast('Fatura deÄŸiÅŸiklik iÃ§in aÃ§Ä±lamadÄ±: ' + error.message);
+  }
+
+}
+
+
+async function updatePurchaseInvoice(
+  id,
+  data
+) {
+
+  try {
+
+    const oldResult = await db
+      .from('purchase_items')
+      .select('*')
+      .eq('purchase_id', id);
+
+    if (oldResult.error) throw oldResult.error;
+
+    const changes = calculateStockChanges(
+      oldResult.data || [],
+      purchaseItems,
+      'purchase'
+    );
+
+    validateStockChanges(changes);
+
+    const headerResult = await db
+      .from('purchases')
+      .update({
+        invoice_no: data.invoiceNo,
+        party_id: data.partyId,
+        invoice_date: data.invoiceDate,
+        subtotal: data.totals.subtotal,
+        vat_rate: 0,
+        vat_amount: data.totals.vatTotal,
+        total: data.totals.total,
+        note: data.note,
+        currency: data.totals.currency,
+        exchange_rate: data.totals.exchangeRate,
+        subtotal_try: data.totals.subtotalTry,
+        vat_amount_try: data.totals.vatAmountTry,
+        total_try: data.totals.totalTry
+      })
+      .eq('id', id);
+
+    if (headerResult.error) throw headerResult.error;
+
+    const movementDelete = await db
+      .from('stock_movements')
+      .delete()
+      .eq('source_type', 'purchase')
+      .eq('source_id', id);
+
+    if (movementDelete.error) throw movementDelete.error;
+
+    const itemDelete = await db
+      .from('purchase_items')
+      .delete()
+      .eq('purchase_id', id);
+
+    if (itemDelete.error) throw itemDelete.error;
+
+    const itemResult = await db
+      .from('purchase_items')
+      .insert(invoiceItemRows('purchase', id, purchaseItems));
+
+    if (itemResult.error) throw itemResult.error;
+
+    await applyStockChanges(
+      changes,
+      purchaseItems,
+      'purchase_price',
+      data.totals.exchangeRate
+    );
+
+    const partyName = parties.find(
+      x => x.id === data.partyId
+    )?.name || 'TedarikÃ§i belirtilmedi';
+
+    const movementResult = await db
+      .from('stock_movements')
+      .insert(purchaseItems.map(item => ({
+        product_id: item.product_id,
+        party_id: data.partyId,
+        type: 'in',
+        quantity: item.quantity,
+        source_type: 'purchase',
+        source_id: id,
+        note: `${partyName} firmasÄ±ndan satÄ±n alma${data.invoiceNo ? ` - Fatura: ${data.invoiceNo}` : ''}`
+      })));
+
+    if (movementResult.error) throw movementResult.error;
+
+    editingPurchaseId = null;
+    toast('AlÄ±ÅŸ faturasÄ± gÃ¼ncellendi.');
+    clearPurchase();
+    await loadAll();
+
+  } catch (error) {
+    console.error(error);
+    toast('AlÄ±ÅŸ faturasÄ± gÃ¼ncellenemedi: ' + error.message);
+  }
+
+}
+
+
+async function updateSaleInvoice(
+  id,
+  data
+) {
+
+  try {
+
+    const oldResult = await db
+      .from('sale_items')
+      .select('*')
+      .eq('sale_id', id);
+
+    if (oldResult.error) throw oldResult.error;
+
+    const changes = calculateStockChanges(
+      oldResult.data || [],
+      saleItems,
+      'sale'
+    );
+
+    validateStockChanges(changes);
+
+    const headerResult = await db
+      .from('sales')
+      .update({
+        invoice_no: data.invoiceNo,
+        party_id: data.partyId,
+        invoice_date: data.invoiceDate,
+        subtotal: data.totals.subtotal,
+        vat_rate: 0,
+        vat_amount: data.totals.vatTotal,
+        total: data.totals.total,
+        note: data.note,
+        currency: data.totals.currency,
+        exchange_rate: data.totals.exchangeRate,
+        subtotal_try: data.totals.subtotalTry,
+        vat_amount_try: data.totals.vatAmountTry,
+        total_try: data.totals.totalTry
+      })
+      .eq('id', id);
+
+    if (headerResult.error) throw headerResult.error;
+
+    const movementDelete = await db
+      .from('stock_movements')
+      .delete()
+      .eq('source_type', 'sale')
+      .eq('source_id', id);
+
+    if (movementDelete.error) throw movementDelete.error;
+
+    const itemDelete = await db
+      .from('sale_items')
+      .delete()
+      .eq('sale_id', id);
+
+    if (itemDelete.error) throw itemDelete.error;
+
+    const itemResult = await db
+      .from('sale_items')
+      .insert(invoiceItemRows('sale', id, saleItems));
+
+    if (itemResult.error) throw itemResult.error;
+
+    await applyStockChanges(
+      changes,
+      saleItems,
+      'sale_price',
+      data.totals.exchangeRate
+    );
+
+    const partyName = parties.find(
+      x => x.id === data.partyId
+    )?.name || 'MÃ¼ÅŸteri belirtilmedi';
+
+    const movementResult = await db
+      .from('stock_movements')
+      .insert(saleItems.map(item => ({
+        product_id: item.product_id,
+        party_id: data.partyId,
+        type: 'out',
+        quantity: item.quantity,
+        source_type: 'sale',
+        source_id: id,
+        note: `${partyName} firmasÄ±na satÄ±ÅŸ${data.invoiceNo ? ` - Fatura: ${data.invoiceNo}` : ''}`
+      })));
+
+    if (movementResult.error) throw movementResult.error;
+
+    editingSaleId = null;
+    toast('SatÄ±ÅŸ faturasÄ± gÃ¼ncellendi.');
+    clearSale();
+    await loadAll();
+
+  } catch (error) {
+    console.error(error);
+    toast('SatÄ±ÅŸ faturasÄ± gÃ¼ncellenemedi: ' + error.message);
+  }
+
+}
+
+
+async function deleteInvoice(
+  id,
+  type
+) {
+
+  const isPurchase =
+    type === 'purchase';
+
+  const warning =
+    'Bu faturayÄ± silmek istediÄŸinize emin misiniz?\n\n' +
+    'Fatura silindiÄŸinde ilgili stok giriÅŸ/Ã§Ä±kÄ±ÅŸlarÄ± geri alÄ±nacaktÄ±r. ' +
+    'HatalÄ± silme iÅŸlemi stok kayÄ±tlarÄ±nÄ± etkileyebilir.';
+
+  if (!confirm(warning)) return;
+
+  try {
+
+    const itemTable =
+      isPurchase
+        ? 'purchase_items'
+        : 'sale_items';
+
+    const invoiceTable =
+      isPurchase
+        ? 'purchases'
+        : 'sales';
+
+    const foreignKey =
+      isPurchase
+        ? 'purchase_id'
+        : 'sale_id';
+
+    const result = await db
+      .from(itemTable)
+      .select('*')
+      .eq(foreignKey, id);
+
+    if (result.error) throw result.error;
+
+    const changes = calculateStockChanges(
+      result.data || [],
+      [],
+      type
+    );
+
+    validateStockChanges(changes);
+
+    await applyStockChanges(changes);
+
+    const movementDelete = await db
+      .from('stock_movements')
+      .delete()
+      .eq(
+        'source_type',
+        isPurchase ? 'purchase' : 'sale'
+      )
+      .eq('source_id', id);
+
+    if (movementDelete.error) throw movementDelete.error;
+
+    const invoiceDelete = await db
+      .from(invoiceTable)
+      .delete()
+      .eq('id', id);
+
+    if (invoiceDelete.error) throw invoiceDelete.error;
+
+    toast(
+      `${isPurchase ? 'AlÄ±ÅŸ' : 'SatÄ±ÅŸ'} faturasÄ± silindi ve stok gÃ¼ncellendi.`
+    );
+
+    await loadAll();
+
+  } catch (error) {
+    console.error(error);
+    toast('Fatura silinemedi: ' + error.message);
+  }
+
+}
+
+
+function deletePurchaseInvoice(id) {
+  return deleteInvoice(id, 'purchase');
+}
+
+
+function deleteSaleInvoice(id) {
+  return deleteInvoice(id, 'sale');
+}
+
+
+window.openPurchaseForm =
+  openPurchaseForm;
+
+window.closePurchaseForm =
+  closePurchaseForm;
+
+window.openSaleForm =
+  openSaleForm;
+
+window.closeSaleForm =
+  closeSaleForm;
+
+
+/* =========================================================
+   BAÅLAT
 ========================================================= */
 
 document.addEventListener(
@@ -5401,8 +6381,8 @@ document.addEventListener(
     ) {
 
       /*
-        Eğer satın alma formu açıksa
-        önce onu düzgün şekilde kapat.
+        EÄŸer satÄ±n alma formu aÃ§Ä±ksa
+        Ã¶nce onu dÃ¼zgÃ¼n ÅŸekilde kapat.
       */
 
       if (

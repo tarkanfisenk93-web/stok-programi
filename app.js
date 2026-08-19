@@ -9,6 +9,12 @@ let movements = [];
 let purchaseItems = [];
 let saleItems = [];
 
+let purchaseCurrency = "TRY";
+let saleCurrency = "TRY";
+
+let purchaseRate = 1;
+let saleRate = 1;
+
 
 /* =========================================================
    BAŞLANGIÇ
@@ -29,11 +35,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   await loadAll();
 
+  setupCurrencyAreas();
+
 });
 
 
 /* =========================================================
-   GENEL YARDIMCILAR
+   GENEL
 ========================================================= */
 
 function number(value) {
@@ -41,12 +49,17 @@ function number(value) {
 }
 
 
-function money(value) {
+function money(value, currency = "TRY") {
+
+  const symbol =
+    currency === "USD"
+      ? "$"
+      : "₺";
 
   return Number(value || 0).toLocaleString("tr-TR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-  }) + " ₺";
+  }) + " " + symbol;
 
 }
 
@@ -58,7 +71,8 @@ function today() {
 
 function setText(id, value) {
 
-  const element = document.getElementById(id);
+  const element =
+    document.getElementById(id);
 
   if (element) {
     element.textContent = value;
@@ -81,7 +95,8 @@ function escapeHtml(value) {
 
 function showToast(message) {
 
-  const toast = document.getElementById("toast");
+  const toast =
+    document.getElementById("toast");
 
   if (!toast) return;
 
@@ -106,19 +121,25 @@ function setupNavigation() {
 
     button.addEventListener("click", () => {
 
-      const page = button.dataset.page;
+      const page =
+        button.dataset.page;
 
       document
         .querySelectorAll(".menu")
-        .forEach(x => x.classList.remove("active"));
+        .forEach(x =>
+          x.classList.remove("active")
+        );
 
       button.classList.add("active");
 
       document
         .querySelectorAll(".page")
-        .forEach(x => x.classList.add("hidden"));
+        .forEach(x =>
+          x.classList.add("hidden")
+        );
 
-      const target = document.getElementById(page);
+      const target =
+        document.getElementById(page);
 
       if (target) {
         target.classList.remove("hidden");
@@ -154,11 +175,13 @@ function setupNavigation() {
       if (page === "purchase") {
         preparePurchasePage();
         renderPurchaseItems();
+        setupCurrencyAreas();
       }
 
       if (page === "sales") {
         prepareSalePage();
         renderSaleItems();
+        setupCurrencyAreas();
       }
 
       if (page === "movements") {
@@ -208,61 +231,68 @@ function setDefaultDates() {
 
 
 /* =========================================================
-   VERİLERİ YÜKLE
+   VERİLER
 ========================================================= */
 
 async function loadAll() {
 
   if (!db) {
 
-    console.error(
-      "Supabase bağlantısı bulunamadı."
-    );
-
     showToast(
       "Supabase bağlantısı bulunamadı."
     );
 
     return;
+
   }
 
 
   try {
 
-    const results = await Promise.all([
+    const results =
+      await Promise.all([
 
-      db
-        .from("products")
-        .select("*")
-        .order("name"),
+        db
+          .from("products")
+          .select("*")
+          .order("name"),
 
-      db
-        .from("parties")
-        .select("*")
-        .order("name"),
+        db
+          .from("parties")
+          .select("*")
+          .order("name"),
 
-      db
-        .from("purchases")
-        .select("*")
-        .order("invoice_date", {
-          ascending: false
-        }),
+        db
+          .from("purchases")
+          .select("*")
+          .order(
+            "invoice_date",
+            {
+              ascending: false
+            }
+          ),
 
-      db
-        .from("sales")
-        .select("*")
-        .order("invoice_date", {
-          ascending: false
-        }),
+        db
+          .from("sales")
+          .select("*")
+          .order(
+            "invoice_date",
+            {
+              ascending: false
+            }
+          ),
 
-      db
-        .from("stock_movements")
-        .select("*")
-        .order("created_at", {
-          ascending: false
-        })
+        db
+          .from("stock_movements")
+          .select("*")
+          .order(
+            "created_at",
+            {
+              ascending: false
+            }
+          )
 
-    ]);
+      ]);
 
 
     for (const result of results) {
@@ -300,18 +330,20 @@ async function loadAll() {
     preparePurchasePage();
     prepareSalePage();
 
+    setupCurrencyAreas();
+
   }
 
   catch (error) {
 
     console.error(
-      "loadAll hatası:",
+      "loadAll:",
       error
     );
 
     showToast(
       "Veriler yüklenemedi: " +
-      (error.message || "Bilinmeyen hata")
+      error.message
     );
 
   }
@@ -325,8 +357,10 @@ async function loadAll() {
 
 function renderDashboard() {
 
-  const totalProducts =
-    products.length;
+  setText(
+    "totalProducts",
+    products.length
+  );
 
 
   const totalStock =
@@ -338,9 +372,10 @@ function renderDashboard() {
 
 
   const critical =
-    products.filter(p =>
-      number(p.stock_quantity) <=
-      number(p.critical_stock)
+    products.filter(
+      p =>
+        number(p.stock_quantity) <=
+        number(p.critical_stock)
     ).length;
 
 
@@ -362,8 +397,9 @@ function renderDashboard() {
 
   const todaySales =
     sales
-      .filter(x =>
-        x.invoice_date === today()
+      .filter(
+        x =>
+          x.invoice_date === today()
       )
       .reduce(
         (sum, x) =>
@@ -371,11 +407,6 @@ function renderDashboard() {
         0
       );
 
-
-  setText(
-    "totalProducts",
-    totalProducts
-  );
 
   setText(
     "totalStock",
@@ -424,9 +455,10 @@ function renderDashboard() {
 
 
   const criticalProducts =
-    products.filter(p =>
-      number(p.stock_quantity) <=
-      number(p.critical_stock)
+    products.filter(
+      p =>
+        number(p.stock_quantity) <=
+        number(p.critical_stock)
     );
 
 
@@ -463,13 +495,9 @@ function renderDashboard() {
 
           <tr>
 
-            <td>
-              ${escapeHtml(p.code)}
-            </td>
+            <td>${escapeHtml(p.code)}</td>
 
-            <td>
-              ${escapeHtml(p.name)}
-            </td>
+            <td>${escapeHtml(p.name)}</td>
 
             <td class="text-danger">
               ${number(p.stock_quantity)}
@@ -658,7 +686,9 @@ function openProductForm(id = null) {
 
   const product =
     products.find(
-      x => String(x.id) === String(id)
+      x =>
+        String(x.id) ===
+        String(id)
     );
 
 
@@ -862,13 +892,17 @@ async function saveProduct(id) {
     code,
     name,
 
-    stock_quantity: stock,
+    stock_quantity:
+      stock,
 
-    critical_stock: critical,
+    critical_stock:
+      critical,
 
-    purchase_price: purchase,
+    purchase_price:
+      purchase,
 
-    sale_price: sale
+    sale_price:
+      sale
 
   };
 
@@ -1098,7 +1132,9 @@ function openPartyForm(id = null) {
 
   const party =
     parties.find(
-      x => String(x.id) === String(id)
+      x =>
+        String(x.id) ===
+        String(id)
     );
 
 
@@ -1430,9 +1466,11 @@ function openModal(title, content) {
     );
 
 
-  if (!titleElement || !form || !modal) {
-    return;
-  }
+  if (
+    !titleElement ||
+    !form ||
+    !modal
+  ) return;
 
 
   titleElement.textContent =
@@ -1465,6 +1503,352 @@ function closeModal() {
 
 
 /* =========================================================
+   PARA BİRİMİ
+========================================================= */
+
+function setupCurrencyAreas() {
+
+  setupCurrencyArea(
+    "purchase"
+  );
+
+  setupCurrencyArea(
+    "sale"
+  );
+
+}
+
+
+function setupCurrencyArea(type) {
+
+  const prefix =
+    type === "purchase"
+      ? "purchase"
+      : "sale";
+
+
+  const productId =
+    `${prefix}Product`;
+
+  const product =
+    document.getElementById(productId);
+
+  if (!product) return;
+
+
+  if (
+    document.getElementById(
+      `${prefix}CurrencyBox`
+    )
+  ) {
+
+    updateCurrencyVisibility(
+      type
+    );
+
+    return;
+
+  }
+
+
+  const invoiceNo =
+    document.getElementById(
+      `${prefix}InvoiceNo`
+    );
+
+
+  if (!invoiceNo) return;
+
+
+  const box =
+    document.createElement("div");
+
+  box.id =
+    `${prefix}CurrencyBox`;
+
+  box.style.marginBottom =
+    "15px";
+
+  box.innerHTML = `
+
+    <div
+      style="
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:15px;
+        background:#f9fafb;
+        padding:15px;
+        border-radius:8px;
+      "
+    >
+
+      <div>
+
+        <label>Fatura Para Birimi</label>
+
+        <select id="${prefix}Currency">
+
+          <option value="TRY">
+            TL
+          </option>
+
+          <option value="USD">
+            USD
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <div
+        id="${prefix}RateWrap"
+        style="display:none;"
+      >
+
+        <label>
+          Fatura Kuru (1 USD = TL)
+        </label>
+
+        <input
+          id="${prefix}Rate"
+          type="number"
+          min="0"
+          step="0.0001"
+          placeholder="Örn: 40.2500"
+        >
+
+      </div>
+
+    </div>
+
+  `;
+
+
+  const parent =
+    invoiceNo.parentElement;
+
+
+  parent.parentElement.insertBefore(
+    box,
+    parent.nextSibling
+  );
+
+
+  document
+    .getElementById(`${prefix}Currency`)
+    ?.addEventListener(
+      "change",
+      () => {
+
+        if (type === "purchase") {
+
+          purchaseCurrency =
+            document
+              .getElementById(
+                "purchaseCurrency"
+              )
+              .value;
+
+        }
+
+        else {
+
+          saleCurrency =
+            document
+              .getElementById(
+                "saleCurrency"
+              )
+              .value;
+
+        }
+
+        updateCurrencyVisibility(
+          type
+        );
+
+        renderInvoiceItemsByType(
+          type
+        );
+
+      }
+    );
+
+
+  document
+    .getElementById(`${prefix}Rate`)
+    ?.addEventListener(
+      "input",
+      () => {
+
+        if (type === "purchase") {
+
+          purchaseRate =
+            number(
+              document
+                .getElementById(
+                  "purchaseRate"
+                )
+                .value
+            );
+
+        }
+
+        else {
+
+          saleRate =
+            number(
+              document
+                .getElementById(
+                  "saleRate"
+                )
+                .value
+            );
+
+        }
+
+        calculatePurchaseTotals();
+        calculateSaleTotals();
+
+      }
+    );
+
+
+  updateCurrencyVisibility(
+    type
+  );
+
+}
+
+
+function updateCurrencyVisibility(type) {
+
+  const prefix =
+    type === "purchase"
+      ? "purchase"
+      : "sale";
+
+
+  const currency =
+    document
+      .getElementById(
+        `${prefix}Currency`
+      );
+
+
+  const rateWrap =
+    document
+      .getElementById(
+        `${prefix}RateWrap`
+      );
+
+
+  if (!currency || !rateWrap) return;
+
+
+  const value =
+    currency.value;
+
+
+  if (type === "purchase") {
+    purchaseCurrency = value;
+  }
+
+  else {
+    saleCurrency = value;
+  }
+
+
+  if (value === "USD") {
+
+    rateWrap.style.display =
+      "block";
+
+  }
+
+  else {
+
+    rateWrap.style.display =
+      "none";
+
+  }
+
+}
+
+
+function getPurchaseCurrency() {
+
+  return (
+    document
+      .getElementById(
+        "purchaseCurrency"
+      )
+      ?.value ||
+    purchaseCurrency ||
+    "TRY"
+  );
+
+}
+
+
+function getSaleCurrency() {
+
+  return (
+    document
+      .getElementById(
+        "saleCurrency"
+      )
+      ?.value ||
+    saleCurrency ||
+    "TRY"
+  );
+
+}
+
+
+function getPurchaseRate() {
+
+  const currency =
+    getPurchaseCurrency();
+
+  if (currency !== "USD") {
+    return 1;
+  }
+
+
+  return number(
+    document
+      .getElementById(
+        "purchaseRate"
+      )
+      ?.value
+  );
+
+}
+
+
+function getSaleRate() {
+
+  const currency =
+    getSaleCurrency();
+
+  if (currency !== "USD") {
+    return 1;
+  }
+
+
+  return number(
+    document
+      .getElementById(
+        "saleRate"
+      )
+      ?.value
+  );
+
+}
+
+
+/* =========================================================
    SATIN ALMA
 ========================================================= */
 
@@ -1472,11 +1856,18 @@ function preparePurchasePage() {
 
   fillPartySelect(
     "purchaseParty",
-    ["supplier", "both"]
+    [
+      "supplier",
+      "both"
+    ]
   );
 
   fillProductSelect(
     "purchaseProduct"
+  );
+
+  setupCurrencyArea(
+    "purchase"
   );
 
 }
@@ -1520,8 +1911,11 @@ function fillPartySelect(
 
 
   const filtered =
-    parties.filter(p =>
-      allowedTypes.includes(p.type)
+    parties.filter(
+      p =>
+        allowedTypes.includes(
+          p.type
+        )
     );
 
 
@@ -1542,8 +1936,7 @@ function fillPartySelect(
 
 
 /* =========================================================
-   SATIN ALMA ÜRÜN EKLE
-   ÖNEMLİ: TEK BİR FONKSİYON
+   ALIŞ ÜRÜN EKLE
 ========================================================= */
 
 function addPurchaseItem() {
@@ -1640,6 +2033,24 @@ function addPurchaseItem() {
   }
 
 
+  const currency =
+    getPurchaseCurrency();
+
+
+  if (
+    currency === "USD" &&
+    getPurchaseRate() <= 0
+  ) {
+
+    showToast(
+      "USD fatura için kur girin."
+    );
+
+    return;
+
+  }
+
+
   const product =
     products.find(
       p =>
@@ -1688,7 +2099,6 @@ function addPurchaseItem() {
 
   renderPurchaseItems();
 
-
   showToast(
     "Ürün faturaya eklendi."
   );
@@ -1697,7 +2107,7 @@ function addPurchaseItem() {
 
 
 /* =========================================================
-   SATIN ALMA KALEMLERİ
+   ALIŞ KALEMLERİ
 ========================================================= */
 
 function renderPurchaseItems() {
@@ -1722,6 +2132,10 @@ function renderPurchaseItems() {
     return;
 
   }
+
+
+  const currency =
+    getPurchaseCurrency();
 
 
   container.innerHTML = `
@@ -1787,7 +2201,8 @@ function renderPurchaseItems() {
 
                 <td>
                   ${money(
-                    item.unit_price
+                    item.unit_price,
+                    currency
                   )}
                 </td>
 
@@ -1796,15 +2211,24 @@ function renderPurchaseItems() {
                 </td>
 
                 <td>
-                  ${money(subtotal)}
+                  ${money(
+                    subtotal,
+                    currency
+                  )}
                 </td>
 
                 <td>
-                  ${money(vatAmount)}
+                  ${money(
+                    vatAmount,
+                    currency
+                  )}
                 </td>
 
                 <td>
-                  ${money(total)}
+                  ${money(
+                    total,
+                    currency
+                  )}
                 </td>
 
                 <td>
@@ -1871,22 +2295,105 @@ function calculatePurchaseTotals() {
   });
 
 
+  const currency =
+    getPurchaseCurrency();
+
+
   setText(
     "purchaseSubtotal",
-    money(subtotal)
+    money(
+      subtotal,
+      currency
+    )
   );
 
   setText(
     "purchaseVatTotal",
-    money(vatTotal)
+    money(
+      vatTotal,
+      currency
+    )
   );
 
   setText(
     "purchaseGrandTotal",
     money(
-      subtotal + vatTotal
+      subtotal + vatTotal,
+      currency
     )
   );
+
+
+  const rate =
+    getPurchaseRate();
+
+
+  const tlTotal =
+    (subtotal + vatTotal) *
+    rate;
+
+
+  let tlElement =
+    document.getElementById(
+      "purchaseGrandTotalTL"
+    );
+
+
+  if (
+    currency === "USD" &&
+    rate > 0
+  ) {
+
+    if (!tlElement) {
+
+      const total =
+        document.querySelector(
+          "#purchaseGrandTotal"
+        );
+
+      if (
+        total &&
+        total.parentElement
+      ) {
+
+        tlElement =
+          document.createElement(
+            "div"
+          );
+
+        tlElement.id =
+          "purchaseGrandTotalTL";
+
+        tlElement.style.marginTop =
+          "8px";
+
+        tlElement.style.fontWeight =
+          "600";
+
+        total.parentElement.appendChild(
+          tlElement
+        );
+
+      }
+
+    }
+
+
+    if (tlElement) {
+
+      tlElement.textContent =
+        "TL Karşılığı: " +
+        money(tlTotal);
+
+    }
+
+  }
+
+  else if (tlElement) {
+
+    tlElement.remove();
+
+  }
 
 
   return {
@@ -1895,7 +2402,15 @@ function calculatePurchaseTotals() {
     vatTotal,
 
     total:
-      subtotal + vatTotal
+      subtotal + vatTotal,
+
+    currency,
+
+    exchangeRate:
+      rate,
+
+    totalTL:
+      tlTotal
 
   };
 
@@ -1910,11 +2425,18 @@ function prepareSalePage() {
 
   fillPartySelect(
     "saleParty",
-    ["customer", "both"]
+    [
+      "customer",
+      "both"
+    ]
   );
 
   fillProductSelect(
     "saleProduct"
+  );
+
+  setupCurrencyArea(
+    "sale"
   );
 
 }
@@ -1985,6 +2507,24 @@ function addSaleItem() {
 
     showToast(
       "Ürün ve miktar seçmelisiniz."
+    );
+
+    return;
+
+  }
+
+
+  const currency =
+    getSaleCurrency();
+
+
+  if (
+    currency === "USD" &&
+    getSaleRate() <= 0
+  ) {
+
+    showToast(
+      "USD fatura için kur girin."
     );
 
     return;
@@ -2068,7 +2608,6 @@ function addSaleItem() {
 
   renderSaleItems();
 
-
   showToast(
     "Ürün faturaya eklendi."
   );
@@ -2098,6 +2637,10 @@ function renderSaleItems() {
     return;
 
   }
+
+
+  const currency =
+    getSaleCurrency();
 
 
   container.innerHTML = `
@@ -2163,7 +2706,8 @@ function renderSaleItems() {
 
                 <td>
                   ${money(
-                    item.unit_price
+                    item.unit_price,
+                    currency
                   )}
                 </td>
 
@@ -2172,15 +2716,24 @@ function renderSaleItems() {
                 </td>
 
                 <td>
-                  ${money(subtotal)}
+                  ${money(
+                    subtotal,
+                    currency
+                  )}
                 </td>
 
                 <td>
-                  ${money(vatAmount)}
+                  ${money(
+                    vatAmount,
+                    currency
+                  )}
                 </td>
 
                 <td>
-                  ${money(total)}
+                  ${money(
+                    total,
+                    currency
+                  )}
                 </td>
 
                 <td>
@@ -2247,22 +2800,105 @@ function calculateSaleTotals() {
   });
 
 
+  const currency =
+    getSaleCurrency();
+
+
   setText(
     "saleSubtotal",
-    money(subtotal)
+    money(
+      subtotal,
+      currency
+    )
   );
 
   setText(
     "saleVatTotal",
-    money(vatTotal)
+    money(
+      vatTotal,
+      currency
+    )
   );
 
   setText(
     "saleGrandTotal",
     money(
-      subtotal + vatTotal
+      subtotal + vatTotal,
+      currency
     )
   );
+
+
+  const rate =
+    getSaleRate();
+
+
+  const tlTotal =
+    (subtotal + vatTotal) *
+    rate;
+
+
+  let tlElement =
+    document.getElementById(
+      "saleGrandTotalTL"
+    );
+
+
+  if (
+    currency === "USD" &&
+    rate > 0
+  ) {
+
+    if (!tlElement) {
+
+      const total =
+        document.querySelector(
+          "#saleGrandTotal"
+        );
+
+      if (
+        total &&
+        total.parentElement
+      ) {
+
+        tlElement =
+          document.createElement(
+            "div"
+          );
+
+        tlElement.id =
+          "saleGrandTotalTL";
+
+        tlElement.style.marginTop =
+          "8px";
+
+        tlElement.style.fontWeight =
+          "600";
+
+        total.parentElement.appendChild(
+          tlElement
+        );
+
+      }
+
+    }
+
+
+    if (tlElement) {
+
+      tlElement.textContent =
+        "TL Karşılığı: " +
+        money(tlTotal);
+
+    }
+
+  }
+
+  else if (tlElement) {
+
+    tlElement.remove();
+
+  }
 
 
   return {
@@ -2271,9 +2907,34 @@ function calculateSaleTotals() {
     vatTotal,
 
     total:
-      subtotal + vatTotal
+      subtotal + vatTotal,
+
+    currency,
+
+    exchangeRate:
+      rate,
+
+    totalTL:
+      tlTotal
 
   };
+
+}
+
+
+function renderInvoiceItemsByType(type) {
+
+  if (type === "purchase") {
+
+    renderPurchaseItems();
+
+  }
+
+  else {
+
+    renderSaleItems();
+
+  }
 
 }
 
@@ -2334,39 +2995,95 @@ async function savePurchase() {
     calculatePurchaseTotals();
 
 
+  if (
+    totals.currency === "USD" &&
+    totals.exchangeRate <= 0
+  ) {
+
+    showToast(
+      "USD fatura için kur girmelisiniz."
+    );
+
+    return;
+
+  }
+
+
   try {
 
-    const purchaseResult =
+    const invoiceData = {
+
+      invoice_no:
+        invoiceNo,
+
+      party_id:
+        partyId,
+
+      invoice_date:
+        invoiceDate,
+
+      subtotal:
+        totals.subtotal,
+
+      vat_rate:
+        0,
+
+      vat_amount:
+        totals.vatTotal,
+
+      total:
+        totals.total,
+
+      note
+
+    };
+
+
+    /*
+      Önce yeni para birimi alanlarıyla deniyoruz.
+      Eğer Supabase tablosunda bu kolonlar henüz yoksa
+      eski yapıya geri dönüyoruz.
+    */
+
+    let purchaseResult =
       await db
         .from("purchases")
         .insert({
 
-          invoice_no:
-            invoiceNo,
+          ...invoiceData,
 
-          party_id:
-            partyId,
+          currency:
+            totals.currency,
 
-          invoice_date:
-            invoiceDate,
+          exchange_rate:
+            totals.exchangeRate,
 
-          subtotal:
-            totals.subtotal,
-
-          vat_rate:
-            0,
-
-          vat_amount:
-            totals.vatTotal,
-
-          total:
-            totals.total,
-
-          note
+          total_tl:
+            totals.totalTL
 
         })
         .select()
         .single();
+
+
+    if (
+      purchaseResult.error &&
+      /column|schema cache|currency|exchange_rate|total_tl/i
+        .test(
+          purchaseResult.error.message
+        )
+    ) {
+
+      purchaseResult =
+        await db
+          .from("purchases")
+          .insert(
+            invoiceData
+          )
+          .select()
+          .single();
+
+    }
 
 
     if (purchaseResult.error) {
@@ -2415,7 +3132,8 @@ async function savePurchase() {
             vatAmount,
 
           line_total:
-            subtotal + vatAmount
+            subtotal +
+            vatAmount
 
         };
 
@@ -2591,6 +3309,24 @@ async function saveSale() {
       .trim() || "";
 
 
+  const totals =
+    calculateSaleTotals();
+
+
+  if (
+    totals.currency === "USD" &&
+    totals.exchangeRate <= 0
+  ) {
+
+    showToast(
+      "USD fatura için kur girmelisiniz."
+    );
+
+    return;
+
+  }
+
+
   for (const item of saleItems) {
 
     const product =
@@ -2628,43 +3364,75 @@ async function saveSale() {
   }
 
 
-  const totals =
-    calculateSaleTotals();
-
-
   try {
 
-    const saleResult =
+    const invoiceData = {
+
+      invoice_no:
+        invoiceNo,
+
+      party_id:
+        partyId,
+
+      invoice_date:
+        invoiceDate,
+
+      subtotal:
+        totals.subtotal,
+
+      vat_rate:
+        0,
+
+      vat_amount:
+        totals.vatTotal,
+
+      total:
+        totals.total,
+
+      note
+
+    };
+
+
+    let saleResult =
       await db
         .from("sales")
         .insert({
 
-          invoice_no:
-            invoiceNo,
+          ...invoiceData,
 
-          party_id:
-            partyId,
+          currency:
+            totals.currency,
 
-          invoice_date:
-            invoiceDate,
+          exchange_rate:
+            totals.exchangeRate,
 
-          subtotal:
-            totals.subtotal,
-
-          vat_rate:
-            0,
-
-          vat_amount:
-            totals.vatTotal,
-
-          total:
-            totals.total,
-
-          note
+          total_tl:
+            totals.totalTL
 
         })
         .select()
         .single();
+
+
+    if (
+      saleResult.error &&
+      /column|schema cache|currency|exchange_rate|total_tl/i
+        .test(
+          saleResult.error.message
+        )
+    ) {
+
+      saleResult =
+        await db
+          .from("sales")
+          .insert(
+            invoiceData
+          )
+          .select()
+          .single();
+
+    }
 
 
     if (saleResult.error) {
@@ -2713,7 +3481,8 @@ async function saveSale() {
             vatAmount,
 
           line_total:
-            subtotal + vatAmount
+            subtotal +
+            vatAmount
 
         };
 
@@ -2854,6 +3623,9 @@ function clearPurchase() {
 
   purchaseItems = [];
 
+  purchaseCurrency = "TRY";
+  purchaseRate = 1;
+
 
   const invoice =
     document.getElementById(
@@ -2875,23 +3647,33 @@ function clearPurchase() {
       "purchaseNote"
     );
 
+  const currency =
+    document.getElementById(
+      "purchaseCurrency"
+    );
 
-  if (invoice) {
-    invoice.value = "";
-  }
+  const rate =
+    document.getElementById(
+      "purchaseRate"
+    );
 
-  if (date) {
-    date.value = today();
-  }
 
-  if (party) {
-    party.value = "";
-  }
+  if (invoice) invoice.value = "";
 
-  if (note) {
-    note.value = "";
-  }
+  if (date) date.value = today();
 
+  if (party) party.value = "";
+
+  if (note) note.value = "";
+
+  if (currency) currency.value = "TRY";
+
+  if (rate) rate.value = "";
+
+
+  updateCurrencyVisibility(
+    "purchase"
+  );
 
   renderPurchaseItems();
 
@@ -2901,6 +3683,9 @@ function clearPurchase() {
 function clearSale() {
 
   saleItems = [];
+
+  saleCurrency = "TRY";
+  saleRate = 1;
 
 
   const invoice =
@@ -2923,23 +3708,33 @@ function clearSale() {
       "saleNote"
     );
 
+  const currency =
+    document.getElementById(
+      "saleCurrency"
+    );
 
-  if (invoice) {
-    invoice.value = "";
-  }
+  const rate =
+    document.getElementById(
+      "saleRate"
+    );
 
-  if (date) {
-    date.value = today();
-  }
 
-  if (party) {
-    party.value = "";
-  }
+  if (invoice) invoice.value = "";
 
-  if (note) {
-    note.value = "";
-  }
+  if (date) date.value = today();
 
+  if (party) party.value = "";
+
+  if (note) note.value = "";
+
+  if (currency) currency.value = "TRY";
+
+  if (rate) rate.value = "";
+
+
+  updateCurrencyVisibility(
+    "sale"
+  );
 
   renderSaleItems();
 
@@ -3349,6 +4144,33 @@ async function saveMovement() {
    FATURALAR
 ========================================================= */
 
+function getInvoiceCurrency(invoice) {
+
+  if (
+    invoice?.currency === "USD"
+  ) {
+    return "USD";
+  }
+
+  return "TRY";
+
+}
+
+
+function getInvoiceRate(invoice) {
+
+  const rate =
+    number(
+      invoice?.exchange_rate
+    );
+
+  return rate > 0
+    ? rate
+    : 1;
+
+}
+
+
 function renderDocuments() {
 
   const container =
@@ -3370,9 +4192,17 @@ function renderDocuments() {
         );
 
 
+      const currency =
+        getInvoiceCurrency(p);
+
+
       return `
 
-        <tr>
+        <tr
+          onclick="openPurchaseDetails('${p.id}')"
+          style="cursor:pointer;"
+          title="Fatura detayını aç"
+        >
 
           <td>
             ${escapeHtml(
@@ -3385,7 +4215,9 @@ function renderDocuments() {
           </td>
 
           <td>
-            Alış
+            <span class="badge badge-in">
+              Alış
+            </span>
           </td>
 
           <td>
@@ -3395,16 +4227,25 @@ function renderDocuments() {
           </td>
 
           <td>
-            ${money(p.subtotal)}
+            ${money(
+              p.subtotal,
+              currency
+            )}
           </td>
 
           <td>
-            ${money(p.vat_amount)}
+            ${money(
+              p.vat_amount,
+              currency
+            )}
           </td>
 
           <td>
             <strong>
-              ${money(p.total)}
+              ${money(
+                p.total,
+                currency
+              )}
             </strong>
           </td>
 
@@ -3426,9 +4267,17 @@ function renderDocuments() {
         );
 
 
+      const currency =
+        getInvoiceCurrency(s);
+
+
       return `
 
-        <tr>
+        <tr
+          onclick="openSaleDetails('${s.id}')"
+          style="cursor:pointer;"
+          title="Fatura detayını aç"
+        >
 
           <td>
             ${escapeHtml(
@@ -3441,7 +4290,9 @@ function renderDocuments() {
           </td>
 
           <td>
-            Satış
+            <span class="badge badge-out">
+              Satış
+            </span>
           </td>
 
           <td>
@@ -3451,16 +4302,25 @@ function renderDocuments() {
           </td>
 
           <td>
-            ${money(s.subtotal)}
+            ${money(
+              s.subtotal,
+              currency
+            )}
           </td>
 
           <td>
-            ${money(s.vat_amount)}
+            ${money(
+              s.vat_amount,
+              currency
+            )}
           </td>
 
           <td>
             <strong>
-              ${money(s.total)}
+              ${money(
+                s.total,
+                currency
+              )}
             </strong>
           </td>
 
@@ -3471,7 +4331,10 @@ function renderDocuments() {
     }).join("");
 
 
-  if (!purchaseRows && !saleRows) {
+  if (
+    !purchaseRows &&
+    !saleRows
+  ) {
 
     container.innerHTML =
       `<div class="empty">
@@ -3512,7 +4375,745 @@ function renderDocuments() {
 
     </table>
 
+    <div
+      style="
+        margin-top:10px;
+        color:#6b7280;
+        font-size:13px;
+      "
+    >
+      Fatura detayını görmek için satıra tıklayın.
+    </div>
+
   `;
+
+}
+
+
+/* =========================================================
+   ALIŞ FATURA DETAY
+========================================================= */
+
+async function openPurchaseDetails(id) {
+
+  try {
+
+    const purchase =
+      purchases.find(
+        x =>
+          String(x.id) ===
+          String(id)
+      );
+
+
+    if (!purchase) {
+
+      showToast(
+        "Fatura bulunamadı."
+      );
+
+      return;
+
+    }
+
+
+    const party =
+      parties.find(
+        x =>
+          String(x.id) ===
+          String(purchase.party_id)
+      );
+
+
+    const result =
+      await db
+        .from("purchase_items")
+        .select("*")
+        .eq(
+          "purchase_id",
+          id
+        );
+
+
+    if (result.error) {
+      throw result.error;
+    }
+
+
+    const items =
+      result.data || [];
+
+
+    const currency =
+      getInvoiceCurrency(
+        purchase
+      );
+
+
+    const rate =
+      getInvoiceRate(
+        purchase
+      );
+
+
+    const itemRows =
+      items.map(
+        (item, index) => {
+
+          const product =
+            products.find(
+              p =>
+                String(p.id) ===
+                String(item.product_id)
+            );
+
+
+          return `
+
+            <tr>
+
+              <td>
+                ${index + 1}
+              </td>
+
+              <td>
+                ${escapeHtml(
+                  product?.code || "-"
+                )}
+              </td>
+
+              <td>
+                ${escapeHtml(
+                  product?.name || "-"
+                )}
+              </td>
+
+              <td>
+                ${number(
+                  item.quantity
+                )}
+              </td>
+
+              <td>
+                ${money(
+                  item.unit_price,
+                  currency
+                )}
+              </td>
+
+              <td>
+                %${number(
+                  item.vat_rate
+                )}
+              </td>
+
+              <td>
+                ${money(
+                  item.line_total,
+                  currency
+                )}
+              </td>
+
+            </tr>
+
+          `;
+
+        }
+      ).join("");
+
+
+    const tlInfo =
+      currency === "USD"
+        ? `
+          <div
+            style="
+              margin-top:10px;
+              padding:10px;
+              background:#f3f4f6;
+              border-radius:7px;
+            "
+          >
+            <strong>
+              Kur:
+            </strong>
+            1 USD = ${rate.toLocaleString(
+              "tr-TR",
+              {
+                minimumFractionDigits:2,
+                maximumFractionDigits:4
+              }
+            )} TL
+
+            <br>
+
+            <strong>
+              TL Karşılığı:
+            </strong>
+
+            ${money(
+              number(purchase.total) * rate
+            )}
+          </div>
+        `
+        : "";
+
+
+    openModal(
+
+      "Alış Faturası Detayı",
+
+      `
+
+        <div
+          style="
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:15px;
+            margin-bottom:20px;
+          "
+        >
+
+          <div>
+            <strong>Fatura No</strong>
+            <br>
+            ${escapeHtml(
+              purchase.invoice_no || "-"
+            )}
+          </div>
+
+          <div>
+            <strong>Tarih</strong>
+            <br>
+            ${purchase.invoice_date || "-"}
+          </div>
+
+          <div>
+            <strong>Tedarikçi</strong>
+            <br>
+            ${escapeHtml(
+              party?.name || "-"
+            )}
+          </div>
+
+          <div>
+            <strong>Para Birimi</strong>
+            <br>
+            ${
+              currency === "USD"
+                ? "USD"
+                : "TL"
+            }
+          </div>
+
+        </div>
+
+
+        ${tlInfo}
+
+
+        <div
+          style="
+            overflow-x:auto;
+            margin-top:20px;
+          "
+        >
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>#</th>
+                <th>Kod</th>
+                <th>Ürün</th>
+                <th>Miktar</th>
+                <th>Birim Fiyat</th>
+                <th>KDV</th>
+                <th>Toplam</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              ${
+                itemRows ||
+                `
+                  <tr>
+                    <td colspan="7">
+                      Fatura kalemi bulunamadı.
+                    </td>
+                  </tr>
+                `
+              }
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+
+        <div
+          style="
+            margin-top:20px;
+            text-align:right;
+          "
+        >
+
+          <div>
+            Matrah:
+            <strong>
+              ${money(
+                purchase.subtotal,
+                currency
+              )}
+            </strong>
+          </div>
+
+          <div>
+            KDV:
+            <strong>
+              ${money(
+                purchase.vat_amount,
+                currency
+              )}
+            </strong>
+          </div>
+
+          <div
+            style="
+              font-size:20px;
+              margin-top:8px;
+            "
+          >
+            Genel Toplam:
+            <strong>
+              ${money(
+                purchase.total,
+                currency
+              )}
+            </strong>
+          </div>
+
+        </div>
+
+
+        ${
+          purchase.note
+            ? `
+              <div
+                style="
+                  margin-top:20px;
+                  padding:12px;
+                  background:#f9fafb;
+                  border-radius:7px;
+                "
+              >
+                <strong>Not:</strong>
+                ${escapeHtml(
+                  purchase.note
+                )}
+              </div>
+            `
+            : ""
+        }
+
+
+        <div class="form-buttons">
+
+          <button
+            class="secondary"
+            type="button"
+            onclick="closeModal()"
+          >
+            Kapat
+          </button>
+
+        </div>
+
+      `
+
+    );
+
+  }
+
+  catch (error) {
+
+    console.error(error);
+
+    showToast(
+      "Fatura detayları alınamadı: " +
+      error.message
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   SATIŞ FATURA DETAY
+========================================================= */
+
+async function openSaleDetails(id) {
+
+  try {
+
+    const sale =
+      sales.find(
+        x =>
+          String(x.id) ===
+          String(id)
+      );
+
+
+    if (!sale) {
+
+      showToast(
+        "Fatura bulunamadı."
+      );
+
+      return;
+
+    }
+
+
+    const party =
+      parties.find(
+        x =>
+          String(x.id) ===
+          String(sale.party_id)
+      );
+
+
+    const result =
+      await db
+        .from("sale_items")
+        .select("*")
+        .eq(
+          "sale_id",
+          id
+        );
+
+
+    if (result.error) {
+      throw result.error;
+    }
+
+
+    const items =
+      result.data || [];
+
+
+    const currency =
+      getInvoiceCurrency(
+        sale
+      );
+
+
+    const rate =
+      getInvoiceRate(
+        sale
+      );
+
+
+    const itemRows =
+      items.map(
+        (item, index) => {
+
+          const product =
+            products.find(
+              p =>
+                String(p.id) ===
+                String(item.product_id)
+            );
+
+
+          return `
+
+            <tr>
+
+              <td>
+                ${index + 1}
+              </td>
+
+              <td>
+                ${escapeHtml(
+                  product?.code || "-"
+                )}
+              </td>
+
+              <td>
+                ${escapeHtml(
+                  product?.name || "-"
+                )}
+              </td>
+
+              <td>
+                ${number(
+                  item.quantity
+                )}
+              </td>
+
+              <td>
+                ${money(
+                  item.unit_price,
+                  currency
+                )}
+              </td>
+
+              <td>
+                %${number(
+                  item.vat_rate
+                )}
+              </td>
+
+              <td>
+                ${money(
+                  item.line_total,
+                  currency
+                )}
+              </td>
+
+            </tr>
+
+          `;
+
+        }
+      ).join("");
+
+
+    const tlInfo =
+      currency === "USD"
+        ? `
+          <div
+            style="
+              margin-top:10px;
+              padding:10px;
+              background:#f3f4f6;
+              border-radius:7px;
+            "
+          >
+            <strong>
+              Kur:
+            </strong>
+            1 USD = ${rate.toLocaleString(
+              "tr-TR",
+              {
+                minimumFractionDigits:2,
+                maximumFractionDigits:4
+              }
+            )} TL
+
+            <br>
+
+            <strong>
+              TL Karşılığı:
+            </strong>
+
+            ${money(
+              number(sale.total) * rate
+            )}
+          </div>
+        `
+        : "";
+
+
+    openModal(
+
+      "Satış Faturası Detayı",
+
+      `
+
+        <div
+          style="
+            display:grid;
+            grid-template-columns:1fr 1fr;
+            gap:15px;
+            margin-bottom:20px;
+          "
+        >
+
+          <div>
+            <strong>Fatura No</strong>
+            <br>
+            ${escapeHtml(
+              sale.invoice_no || "-"
+            )}
+          </div>
+
+          <div>
+            <strong>Tarih</strong>
+            <br>
+            ${sale.invoice_date || "-"}
+          </div>
+
+          <div>
+            <strong>Müşteri</strong>
+            <br>
+            ${escapeHtml(
+              party?.name || "-"
+            )}
+          </div>
+
+          <div>
+            <strong>Para Birimi</strong>
+            <br>
+            ${
+              currency === "USD"
+                ? "USD"
+                : "TL"
+            }
+          </div>
+
+        </div>
+
+
+        ${tlInfo}
+
+
+        <div
+          style="
+            overflow-x:auto;
+            margin-top:20px;
+          "
+        >
+
+          <table>
+
+            <thead>
+
+              <tr>
+
+                <th>#</th>
+                <th>Kod</th>
+                <th>Ürün</th>
+                <th>Miktar</th>
+                <th>Birim Fiyat</th>
+                <th>KDV</th>
+                <th>Toplam</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              ${
+                itemRows ||
+                `
+                  <tr>
+                    <td colspan="7">
+                      Fatura kalemi bulunamadı.
+                    </td>
+                  </tr>
+                `
+              }
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+
+        <div
+          style="
+            margin-top:20px;
+            text-align:right;
+          "
+        >
+
+          <div>
+            Matrah:
+            <strong>
+              ${money(
+                sale.subtotal,
+                currency
+              )}
+            </strong>
+          </div>
+
+          <div>
+            KDV:
+            <strong>
+              ${money(
+                sale.vat_amount,
+                currency
+              )}
+            </strong>
+          </div>
+
+          <div
+            style="
+              font-size:20px;
+              margin-top:8px;
+            "
+          >
+            Genel Toplam:
+            <strong>
+              ${money(
+                sale.total,
+                currency
+              )}
+            </strong>
+          </div>
+
+        </div>
+
+
+        ${
+          sale.note
+            ? `
+              <div
+                style="
+                  margin-top:20px;
+                  padding:12px;
+                  background:#f9fafb;
+                  border-radius:7px;
+                "
+              >
+                <strong>Not:</strong>
+                ${escapeHtml(
+                  sale.note
+                )}
+              </div>
+            `
+            : ""
+        }
+
+
+        <div class="form-buttons">
+
+          <button
+            class="secondary"
+            type="button"
+            onclick="closeModal()"
+          >
+            Kapat
+          </button>
+
+        </div>
+
+      `
+
+    );
+
+  }
+
+  catch (error) {
+
+    console.error(error);
+
+    showToast(
+      "Fatura detayları alınamadı: " +
+      error.message
+    );
+
+  }
 
 }
 
@@ -3569,7 +5170,8 @@ function renderReports() {
 
 
   const difference =
-    saleTotal - purchaseTotal;
+    saleTotal -
+    purchaseTotal;
 
 
   const totalVatPurchase =
@@ -3702,25 +5304,31 @@ function downloadCSV(
 
   const csv =
     rows
-      .map(row =>
-        row.map(value => {
+      .map(
+        row =>
+          row.map(value => {
 
-          const text =
-            String(value ?? "");
+            const text =
+              String(
+                value ?? ""
+              );
 
-          return `"${text.replaceAll(
-            '"',
-            '""'
-          )}"`;
+            return `"${text.replaceAll(
+              '"',
+              '""'
+            )}"`;
 
-        }).join(";")
+          }).join(";")
       )
       .join("\n");
 
 
   const blob =
     new Blob(
-      ["\uFEFF" + csv],
+      [
+        "\uFEFF" +
+        csv
+      ],
       {
         type:
           "text/csv;charset=utf-8;"
@@ -3740,8 +5348,12 @@ function downloadCSV(
     );
 
 
-  link.href = url;
-  link.download = filename;
+  link.href =
+    url;
+
+  link.download =
+    filename;
+
 
   document.body.appendChild(
     link
@@ -3766,9 +5378,12 @@ function exportPurchasesCSV() {
       "Fatura No",
       "Tarih",
       "Tedarikçi",
+      "Para Birimi",
+      "Kur",
       "Matrah",
       "KDV",
-      "Genel Toplam"
+      "Genel Toplam",
+      "TL Karşılığı"
     ]
 
   ];
@@ -3784,6 +5399,14 @@ function exportPurchasesCSV() {
       );
 
 
+    const currency =
+      getInvoiceCurrency(p);
+
+
+    const rate =
+      getInvoiceRate(p);
+
+
     rows.push([
 
       p.invoice_no || "",
@@ -3792,11 +5415,19 @@ function exportPurchasesCSV() {
 
       party?.name || "",
 
+      currency,
+
+      rate,
+
       p.subtotal || 0,
 
       p.vat_amount || 0,
 
-      p.total || 0
+      p.total || 0,
+
+      currency === "USD"
+        ? number(p.total) * rate
+        : number(p.total)
 
     ]);
 
@@ -3819,9 +5450,12 @@ function exportSalesCSV() {
       "Fatura No",
       "Tarih",
       "Müşteri",
+      "Para Birimi",
+      "Kur",
       "Matrah",
       "KDV",
-      "Genel Toplam"
+      "Genel Toplam",
+      "TL Karşılığı"
     ]
 
   ];
@@ -3837,6 +5471,14 @@ function exportSalesCSV() {
       );
 
 
+    const currency =
+      getInvoiceCurrency(s);
+
+
+    const rate =
+      getInvoiceRate(s);
+
+
     rows.push([
 
       s.invoice_no || "",
@@ -3845,11 +5487,19 @@ function exportSalesCSV() {
 
       party?.name || "",
 
+      currency,
+
+      rate,
+
       s.subtotal || 0,
 
       s.vat_amount || 0,
 
-      s.total || 0
+      s.total || 0,
+
+      currency === "USD"
+        ? number(s.total) * rate
+        : number(s.total)
 
     ]);
 

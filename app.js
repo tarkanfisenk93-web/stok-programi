@@ -43,9 +43,9 @@ const esc = v =>
     .replaceAll("'", '&#039;');
 
 const currencySymbols = {
-  TRY: 'â‚º',
+  TRY: '₺',
   USD: '$',
-  EUR: 'â‚¬'
+  EUR: '€'
 };
 
 const currencyNames = {
@@ -94,7 +94,7 @@ function toast(msg) {
 
 
 /* =========================================================
-   MENÃœ
+   MENÜ
 ========================================================= */
 
 function setupNavigation() {
@@ -119,10 +119,10 @@ function setupNavigation() {
 
       const titles = {
         dashboard: 'Ana Sayfa',
-        products: 'ÃœrÃ¼nler',
-        purchase: 'SatÄ±n Alma',
-        sales: 'SatÄ±ÅŸ',
-        parties: 'Cari / MÃ¼ÅŸteriler',
+        products: 'Ürünler',
+        purchase: 'Satın Alma',
+        sales: 'Satış',
+        parties: 'Cari / Müşteriler',
         documents: 'Faturalar',
         reports: 'Raporlar'
       };
@@ -189,7 +189,7 @@ function setDefaultDates() {
 
 
 /* =========================================================
-   VERÄ°
+   VERİ
 ========================================================= */
 
 async function loadAll() {
@@ -266,7 +266,7 @@ async function loadAll() {
     console.error(e);
 
     toast(
-      'Veriler yÃ¼klenemedi: ' +
+      'Veriler yüklenemedi: ' +
       e.message
     );
 
@@ -386,7 +386,7 @@ function renderDashboard() {
           <thead>
             <tr>
               <th>Kod</th>
-              <th>ÃœrÃ¼n</th>
+              <th>Ürün</th>
               <th>Mevcut</th>
               <th>Kritik Seviye</th>
             </tr>
@@ -427,7 +427,7 @@ function renderDashboard() {
 
 
 /* =========================================================
-   ÃœRÃœNLER
+   ÜRÜNLER
 ========================================================= */
 
 function renderProducts() {
@@ -456,7 +456,7 @@ function renderProducts() {
   if (!list.length) {
 
     c.innerHTML =
-      '<div class="empty">ÃœrÃ¼n bulunamadÄ±.</div>';
+      '<div class="empty">Ürün bulunamadı.</div>';
 
     return;
   }
@@ -469,13 +469,13 @@ function renderProducts() {
 
         <tr>
           <th>Kod</th>
-          <th>ÃœrÃ¼n</th>
+          <th>Ürün</th>
           <th>Stok</th>
           <th>Kritik</th>
-          <th>AlÄ±ÅŸ</th>
-          <th>SatÄ±ÅŸ</th>
+          <th>Alış</th>
+          <th>Satış</th>
           <th>Durum</th>
-          <th>Ä°ÅŸlem</th>
+          <th>İşlem</th>
         </tr>
 
       </thead>
@@ -540,7 +540,7 @@ function renderProducts() {
                   class="secondary"
                   onclick="editProduct('${p.id}')"
                 >
-                  DÃ¼zenle
+                  Düzenle
                 </button>
 
                 <button
@@ -584,8 +584,8 @@ function openProductForm(id = null) {
   openModal(
 
     id
-      ? 'ÃœrÃ¼n DÃ¼zenle'
-      : 'Yeni ÃœrÃ¼n',
+      ? 'Ürün Düzenle'
+      : 'Yeni Ürün',
 
     `
 
@@ -594,7 +594,7 @@ function openProductForm(id = null) {
         <div class="form-group">
 
           <label>
-            ÃœrÃ¼n Kodu
+            Ürün Kodu
           </label>
 
           <input
@@ -607,7 +607,7 @@ function openProductForm(id = null) {
         <div class="form-group">
 
           <label>
-            ÃœrÃ¼n AdÄ±
+            Ürün Adı
           </label>
 
           <input
@@ -634,7 +634,7 @@ function openProductForm(id = null) {
 
           ${id ? `
             <small class="field-help">
-              Stok miktarÄ± satÄ±n alma ve satÄ±ÅŸ faturalarÄ±ndan gÃ¼ncellenir.
+              Stok miktarı satın alma ve satış faturalarından güncellenir.
             </small>
           ` : ''}
 
@@ -658,7 +658,7 @@ function openProductForm(id = null) {
         <div class="form-group">
 
           <label>
-            AlÄ±ÅŸ FiyatÄ±
+            Alış Fiyatı
           </label>
 
           <input
@@ -673,7 +673,7 @@ function openProductForm(id = null) {
         <div class="form-group">
 
           <label>
-            SatÄ±ÅŸ FiyatÄ±
+            Satış Fiyatı
           </label>
 
           <input
@@ -693,7 +693,7 @@ function openProductForm(id = null) {
           class="secondary"
           onclick="closeModal()"
         >
-          VazgeÃ§
+          Vazgeç
         </button>
 
         <button
@@ -724,7 +724,7 @@ function openProductMovements(id) {
     products.find(p => p.id === id);
 
   if (!product) {
-    toast('ÃœrÃ¼n bulunamadÄ±.');
+    toast('Ürün bulunamadı.');
     return;
   }
 
@@ -747,26 +747,26 @@ function openProductMovements(id) {
 
     const documentType =
       m.source_type === 'purchase'
-        ? 'SatÄ±n Alma'
+        ? 'Satın Alma'
         : m.source_type === 'sale'
-          ? 'SatÄ±ÅŸ'
-          : 'BaÅŸlangÄ±Ã§';
+          ? 'Satış'
+          : 'Başlangıç';
 
     const date = document?.invoice_date || m.created_at;
 
     const description =
       m.source_type === 'purchase'
-        ? `${party?.name || 'TedarikÃ§i belirtilmedi'} firmasÄ±ndan satÄ±n alma`
+        ? `${party?.name || 'Tedarikçi belirtilmedi'} firmasından satın alma`
         : m.source_type === 'sale'
-          ? `${party?.name || 'MÃ¼ÅŸteri belirtilmedi'} firmasÄ±na satÄ±ÅŸ`
-          : (m.note || 'BaÅŸlangÄ±Ã§ stoÄŸu');
+          ? `${party?.name || 'Müşteri belirtilmedi'} firmasına satış`
+          : (m.note || 'Başlangıç stoğu');
 
     return `
       <tr>
         <td>${date ? new Date(date).toLocaleDateString('tr-TR') : '-'}</td>
         <td>
           <span class="badge ${m.type === 'in' ? 'badge-in' : 'badge-out'}">
-            ${m.type === 'in' ? 'GiriÅŸ' : 'Ã‡Ä±kÄ±ÅŸ'}
+            ${m.type === 'in' ? 'Giriş' : 'Çıkış'}
           </span>
         </td>
         <td>${num(m.quantity)}</td>
@@ -798,12 +798,12 @@ function openProductMovements(id) {
                 <th>Kaynak</th>
                 <th>Fatura No</th>
                 <th>Cari</th>
-                <th>AÃ§Ä±klama</th>
+                <th>Açıklama</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
           </table>
-        ` : '<div class="empty">Bu Ã¼rÃ¼ne ait stok hareketi bulunamadÄ±.</div>'}
+        ` : '<div class="empty">Bu ürüne ait stok hareketi bulunamadı.</div>'}
       </div>
 
       <div class="form-buttons">
@@ -855,7 +855,7 @@ async function saveProduct(id) {
   if (!data.code || !data.name) {
 
     toast(
-      'ÃœrÃ¼n kodu ve adÄ± zorunludur.'
+      'Ürün kodu ve adı zorunludur.'
     );
 
     return;
@@ -879,7 +879,7 @@ async function saveProduct(id) {
     closeModal();
 
     toast(
-      'ÃœrÃ¼n kaydedildi.'
+      'Ürün kaydedildi.'
     );
 
     await loadAll();
@@ -889,7 +889,7 @@ async function saveProduct(id) {
     console.error(e);
 
     toast(
-      'ÃœrÃ¼n kaydedilemedi: ' +
+      'Ürün kaydedilemedi: ' +
       e.message
     );
 
@@ -902,7 +902,7 @@ async function deleteProduct(id) {
 
   if (
     !confirm(
-      'Bu Ã¼rÃ¼nÃ¼ silmek istediÄŸinize emin misiniz?'
+      'Bu ürünü silmek istediğinize emin misiniz?'
     )
   ) return;
 
@@ -917,7 +917,7 @@ async function deleteProduct(id) {
     if (r.error) throw r.error;
 
     toast(
-      'ÃœrÃ¼n silindi.'
+      'Ürün silindi.'
     );
 
     await loadAll();
@@ -925,7 +925,7 @@ async function deleteProduct(id) {
   } catch (e) {
 
     toast(
-      'ÃœrÃ¼n silinemedi. Hareket kaydÄ± varsa silinemez.'
+      'Ürün silinemedi. Hareket kaydı varsa silinemez.'
     );
 
   }
@@ -934,16 +934,16 @@ async function deleteProduct(id) {
 
 
 /* =========================================================
-   CARÄ°
+   CARİ
 ========================================================= */
 
 function partyType(t) {
 
   return t === 'supplier'
-    ? 'TedarikÃ§i'
+    ? 'Tedarikçi'
     : t === 'both'
-      ? 'MÃ¼ÅŸteri + TedarikÃ§i'
-      : 'MÃ¼ÅŸteri';
+      ? 'Müşteri + Tedarikçi'
+      : 'Müşteri';
 
 }
 
@@ -958,7 +958,7 @@ function renderParties() {
   if (!parties.length) {
 
     c.innerHTML =
-      '<div class="empty">HenÃ¼z cari kaydÄ± yok.</div>';
+      '<div class="empty">Henüz cari kaydı yok.</div>';
 
     return;
   }
@@ -971,11 +971,11 @@ function renderParties() {
 
         <tr>
           <th>Unvan</th>
-          <th>TÃ¼r</th>
+          <th>Tür</th>
           <th>Telefon</th>
           <th>E-posta</th>
           <th>Vergi No</th>
-          <th>Ä°ÅŸlem</th>
+          <th>İşlem</th>
         </tr>
 
       </thead>
@@ -1012,7 +1012,7 @@ function renderParties() {
                 class="secondary"
                 onclick="editParty('${p.id}')"
               >
-                DÃ¼zenle
+                Düzenle
               </button>
 
               <button
@@ -1047,7 +1047,7 @@ function openPartyForm(id = null) {
   openModal(
 
     id
-      ? 'Cari DÃ¼zenle'
+      ? 'Cari Düzenle'
       : 'Yeni Cari',
 
     `
@@ -1083,7 +1083,7 @@ function openPartyForm(id = null) {
                   : ''
               }
             >
-              MÃ¼ÅŸteri
+              Müşteri
             </option>
 
             <option
@@ -1094,7 +1094,7 @@ function openPartyForm(id = null) {
                   : ''
               }
             >
-              TedarikÃ§i
+              Tedarikçi
             </option>
 
             <option
@@ -1105,7 +1105,7 @@ function openPartyForm(id = null) {
                   : ''
               }
             >
-              MÃ¼ÅŸteri + TedarikÃ§i
+              Müşteri + Tedarikçi
             </option>
 
           </select>
@@ -1171,7 +1171,7 @@ function openPartyForm(id = null) {
           class="secondary"
           onclick="closeModal()"
         >
-          VazgeÃ§
+          Vazgeç
         </button>
 
         <button
@@ -1279,7 +1279,7 @@ async function deleteParty(id) {
 
   if (
     !confirm(
-      'Bu cariyi silmek istediÄŸinize emin misiniz?'
+      'Bu cariyi silmek istediğinize emin misiniz?'
     )
   ) return;
 
@@ -1302,7 +1302,7 @@ async function deleteParty(id) {
   } catch (e) {
 
     toast(
-      'Bu cari kullanÄ±ldÄ±ÄŸÄ± iÃ§in silinemiyor.'
+      'Bu cari kullanıldığı için silinemiyor.'
     );
 
   }
@@ -1345,7 +1345,7 @@ function closeModal() {
 
 
 /* =========================================================
-   SEÃ‡Ä°MLER / DÃ–VÄ°Z
+   SEÇİMLER / DÖVİZ
 ========================================================= */
 
 function fillProductSelect(id) {
@@ -1355,7 +1355,7 @@ function fillProductSelect(id) {
   if (!s) return;
 
   s.innerHTML =
-    '<option value="">ÃœrÃ¼n seÃ§in...</option>' +
+    '<option value="">Ürün seçin...</option>' +
 
     products.map(p => `
 
@@ -1375,7 +1375,7 @@ function fillPartySelect(id, types) {
   if (!s) return;
 
   s.innerHTML =
-    '<option value="">Cari seÃ§in...</option>' +
+    '<option value="">Cari seçin...</option>' +
 
     parties
       .filter(
@@ -1508,7 +1508,7 @@ function ensureCurrencyUI(type) {
         type="number"
         min="0.000001"
         step="0.000001"
-        placeholder="Ã–rn. 47,72"
+        placeholder="Örn. 47,72"
         oninput="${type}Totals()"
       >
 
@@ -1580,7 +1580,7 @@ function ensureCurrencySummary(type) {
         margin-bottom:4px;
       "
     >
-      TL KarÅŸÄ±lÄ±ÄŸÄ±
+      TL Karşılığı
     </span>
 
     <strong
@@ -1649,7 +1649,7 @@ function currencyChanged(type) {
 
     if (rateLabel) {
       rateLabel.textContent =
-        `1 ${currency} KaÃ§ TL?`;
+        `1 ${currency} Kaç TL?`;
     }
 
     if (priceInput) {
@@ -1660,7 +1660,7 @@ function currencyChanged(type) {
     if (info) {
       info.style.display = 'block';
       info.textContent =
-        `Birim fiyatlarÄ± ${currency} olarak girin. TL karÅŸÄ±lÄ±ÄŸÄ± yazdÄ±ÄŸÄ±nÄ±z kur Ã¼zerinden otomatik hesaplanÄ±r.`;
+        `Birim fiyatları ${currency} olarak girin. TL karşılığı yazdığınız kur üzerinden otomatik hesaplanır.`;
     }
 
   }
@@ -1735,7 +1735,7 @@ function prepareSalePage() {
 
 
 /* =========================================================
-   ALIÅ
+   ALIŞ
 ========================================================= */
 
 function addPurchaseItem() {
@@ -1761,7 +1761,7 @@ function addPurchaseItem() {
   if (!pid || q <= 0) {
 
     toast(
-      'ÃœrÃ¼n ve miktar seÃ§melisiniz.'
+      'Ürün ve miktar seçmelisiniz.'
     );
 
     return;
@@ -1770,7 +1770,7 @@ function addPurchaseItem() {
   if (price < 0 || isNaN(price)) {
 
     toast(
-      'Birim fiyatÄ± kontrol edin.'
+      'Birim fiyatı kontrol edin.'
     );
 
     return;
@@ -1786,7 +1786,7 @@ function addPurchaseItem() {
   if (!p) {
 
     toast(
-      'SeÃ§ilen Ã¼rÃ¼n bulunamadÄ±.'
+      'Seçilen ürün bulunamadı.'
     );
 
     return;
@@ -1821,7 +1821,7 @@ function addPurchaseItem() {
   renderPurchaseItems();
 
   toast(
-    'ÃœrÃ¼n faturaya eklendi.'
+    'Ürün faturaya eklendi.'
   );
 
 }
@@ -1961,7 +1961,7 @@ function renderPurchaseItems() {
   if (!purchaseItems.length) {
 
     c.innerHTML =
-      '<div class="empty">Faturaya henÃ¼z Ã¼rÃ¼n eklenmedi.</div>';
+      '<div class="empty">Faturaya henüz ürün eklenmedi.</div>';
 
     calculatePurchaseTotals();
 
@@ -1976,12 +1976,12 @@ function renderPurchaseItems() {
 
         <tr>
           <th>#</th>
-          <th>ÃœrÃ¼n</th>
+          <th>Ürün</th>
           <th>Miktar</th>
           <th>Birim Fiyat</th>
           <th>KDV</th>
           <th>Matrah</th>
-          <th>KDV TutarÄ±</th>
+          <th>KDV Tutarı</th>
           <th>Toplam</th>
           <th></th>
         </tr>
@@ -2057,7 +2057,7 @@ function renderPurchaseItems() {
                   class="item-remove"
                   onclick="removePurchaseItem(${n})"
                 >
-                  âœ•
+                  ✕
                 </button>
 
               </td>
@@ -2096,7 +2096,7 @@ async function savePurchase() {
   if (!purchaseItems.length) {
 
     toast(
-      'Faturaya en az bir Ã¼rÃ¼n ekleyin.'
+      'Faturaya en az bir ürün ekleyin.'
     );
 
     return;
@@ -2130,7 +2130,7 @@ async function savePurchase() {
   ) {
 
     toast(
-      'USD/EUR faturasÄ± iÃ§in fatura kurunu girin.'
+      'USD/EUR faturası için fatura kurunu girin.'
     );
 
     return;
@@ -2319,7 +2319,7 @@ async function savePurchase() {
               id,
 
             note:
-              `${parties.find(x => x.id === partyId)?.name || 'TedarikÃ§i belirtilmedi'} firmasÄ±ndan satÄ±n alma${invoiceNo ? ` - Fatura: ${invoiceNo}` : ''}`
+              `${parties.find(x => x.id === partyId)?.name || 'Tedarikçi belirtilmedi'} firmasından satın alma${invoiceNo ? ` - Fatura: ${invoiceNo}` : ''}`
 
           });
 
@@ -2330,7 +2330,7 @@ async function savePurchase() {
     }
 
     toast(
-      'AlÄ±ÅŸ faturasÄ± baÅŸarÄ±yla kaydedildi.'
+      'Alış faturası başarıyla kaydedildi.'
     );
 
     clearPurchase();
@@ -2342,7 +2342,7 @@ async function savePurchase() {
     console.error(e);
 
     toast(
-      'AlÄ±ÅŸ faturasÄ± kaydedilemedi: ' +
+      'Alış faturası kaydedilemedi: ' +
       e.message
     );
 
@@ -2394,7 +2394,7 @@ function clearPurchase() {
 
 
 /* =========================================================
-   SATIÅ
+   SATIŞ
 ========================================================= */
 
 function addSaleItem() {
@@ -2420,7 +2420,7 @@ function addSaleItem() {
   if (!pid || q <= 0) {
 
     toast(
-      'ÃœrÃ¼n ve miktar seÃ§melisiniz.'
+      'Ürün ve miktar seçmelisiniz.'
     );
 
     return;
@@ -2436,7 +2436,7 @@ function addSaleItem() {
   if (!p) {
 
     toast(
-      'SeÃ§ilen Ã¼rÃ¼n bulunamadÄ±.'
+      'Seçilen ürün bulunamadı.'
     );
 
     return;
@@ -2632,7 +2632,7 @@ function renderSaleItems() {
   if (!saleItems.length) {
 
     c.innerHTML =
-      '<div class="empty">Faturaya henÃ¼z Ã¼rÃ¼n eklenmedi.</div>';
+      '<div class="empty">Faturaya henüz ürün eklenmedi.</div>';
 
     calculateSaleTotals();
 
@@ -2647,12 +2647,12 @@ function renderSaleItems() {
 
         <tr>
           <th>#</th>
-          <th>ÃœrÃ¼n</th>
+          <th>Ürün</th>
           <th>Miktar</th>
           <th>Birim Fiyat</th>
           <th>KDV</th>
           <th>Matrah</th>
-          <th>KDV TutarÄ±</th>
+          <th>KDV Tutarı</th>
           <th>Toplam</th>
           <th></th>
         </tr>
@@ -2728,7 +2728,7 @@ function renderSaleItems() {
                   class="item-remove"
                   onclick="removeSaleItem(${n})"
                 >
-                  âœ•
+                  ✕
                 </button>
 
               </td>
@@ -2767,7 +2767,7 @@ async function saveSale() {
   if (!saleItems.length) {
 
     toast(
-      'Faturaya en az bir Ã¼rÃ¼n ekleyin.'
+      'Faturaya en az bir ürün ekleyin.'
     );
 
     return;
@@ -2787,7 +2787,7 @@ async function saveSale() {
       if (!p) {
 
         toast(
-          'ÃœrÃ¼n bulunamadÄ±.'
+          'Ürün bulunamadı.'
         );
 
         return;
@@ -2799,7 +2799,7 @@ async function saveSale() {
       ) {
 
         toast(
-          `${p.name} iÃ§in yeterli stok yok.`
+          `${p.name} için yeterli stok yok.`
         );
 
         return;
@@ -2836,7 +2836,7 @@ async function saveSale() {
   ) {
 
     toast(
-      'USD/EUR faturasÄ± iÃ§in fatura kurunu girin.'
+      'USD/EUR faturası için fatura kurunu girin.'
     );
 
     return;
@@ -2983,7 +2983,7 @@ async function saveSale() {
       if (stock < 0) {
 
         throw new Error(
-          `${p.name} iÃ§in stok yetersiz.`
+          `${p.name} için stok yetersiz.`
         );
 
       }
@@ -3034,7 +3034,7 @@ async function saveSale() {
               id,
 
             note:
-              `${parties.find(x => x.id === partyId)?.name || 'MÃ¼ÅŸteri belirtilmedi'} firmasÄ±na satÄ±ÅŸ${invoiceNo ? ` - Fatura: ${invoiceNo}` : ''}`
+              `${parties.find(x => x.id === partyId)?.name || 'Müşteri belirtilmedi'} firmasına satış${invoiceNo ? ` - Fatura: ${invoiceNo}` : ''}`
 
           });
 
@@ -3045,7 +3045,7 @@ async function saveSale() {
     }
 
     toast(
-      'SatÄ±ÅŸ faturasÄ± baÅŸarÄ±yla kaydedildi.'
+      'Satış faturası başarıyla kaydedildi.'
     );
 
     clearSale();
@@ -3057,7 +3057,7 @@ async function saveSale() {
     console.error(e);
 
     toast(
-      'SatÄ±ÅŸ faturasÄ± kaydedilemedi: ' +
+      'Satış faturası kaydedilemedi: ' +
       e.message
     );
 
@@ -3102,7 +3102,7 @@ function clearSale() {
 
 
 /* =========================================================
-   STOK HAREKETLERÄ°
+   STOK HAREKETLERİ
 ========================================================= */
 
 function renderMovements() {
@@ -3115,7 +3115,7 @@ function renderMovements() {
   if (!movements.length) {
 
     c.innerHTML =
-      '<div class="empty">HenÃ¼z stok hareketi yok.</div>';
+      '<div class="empty">Henüz stok hareketi yok.</div>';
 
     return;
   }
@@ -3128,10 +3128,10 @@ function renderMovements() {
 
         <tr>
           <th>Tarih</th>
-          <th>ÃœrÃ¼n</th>
+          <th>Ürün</th>
           <th>Hareket</th>
           <th>Miktar</th>
-          <th>AÃ§Ä±klama</th>
+          <th>Açıklama</th>
         </tr>
 
       </thead>
@@ -3181,8 +3181,8 @@ function renderMovements() {
 
                   ${
                     m.type === 'in'
-                      ? 'GiriÅŸ'
-                      : 'Ã‡Ä±kÄ±ÅŸ'
+                      ? 'Giriş'
+                      : 'Çıkış'
                   }
 
                 </span>
@@ -3225,13 +3225,13 @@ function openMovementForm() {
       <div class="form-group">
 
         <label>
-          ÃœrÃ¼n
+          Ürün
         </label>
 
         <select id="movementProduct">
 
           <option value="">
-            ÃœrÃ¼n seÃ§in...
+            Ürün seçin...
           </option>
 
           ${products.map(p => `
@@ -3257,11 +3257,11 @@ function openMovementForm() {
           <select id="movementType">
 
             <option value="in">
-              Stok GiriÅŸi
+              Stok Girişi
             </option>
 
             <option value="out">
-              Stok Ã‡Ä±kÄ±ÅŸÄ±
+              Stok Çıkışı
             </option>
 
           </select>
@@ -3288,7 +3288,7 @@ function openMovementForm() {
       <div class="form-group">
 
         <label>
-          AÃ§Ä±klama
+          Açıklama
         </label>
 
         <textarea
@@ -3303,7 +3303,7 @@ function openMovementForm() {
           class="secondary"
           onclick="closeModal()"
         >
-          VazgeÃ§
+          Vazgeç
         </button>
 
         <button
@@ -3345,7 +3345,7 @@ async function saveMovement() {
   if (!pid || q <= 0) {
 
     toast(
-      'ÃœrÃ¼n ve miktar zorunludur.'
+      'Ürün ve miktar zorunludur.'
     );
 
     return;
@@ -3487,14 +3487,14 @@ function renderDocuments() {
     ...purchases.map(
       p => ({
         x: p,
-        t: 'AlÄ±ÅŸ'
+        t: 'Alış'
       })
     ),
 
     ...sales.map(
       s => ({
         x: s,
-        t: 'SatÄ±ÅŸ'
+        t: 'Satış'
       })
     )
 
@@ -3503,7 +3503,7 @@ function renderDocuments() {
   if (!rows.length) {
 
     c.innerHTML =
-      '<div class="empty">HenÃ¼z fatura kaydÄ± yok.</div>';
+      '<div class="empty">Henüz fatura kaydı yok.</div>';
 
     return;
   }
@@ -3517,7 +3517,7 @@ function renderDocuments() {
         font-size:13px;
       "
     >
-      ğŸ’¡ Fatura detayÄ±nÄ± gÃ¶rmek iÃ§in satÄ±ra tÄ±klayÄ±n.
+      💡 Fatura detayını görmek için satıra tıklayın.
     </div>
 
     <table>
@@ -3527,7 +3527,7 @@ function renderDocuments() {
         <tr>
           <th>Fatura No</th>
           <th>Tarih</th>
-          <th>TÃ¼r</th>
+          <th>Tür</th>
           <th>Cari</th>
           <th>Para Birimi</th>
           <th>Genel Toplam</th>
@@ -3638,7 +3638,7 @@ async function showInvoiceDetail(
 ) {
 
   const isPurchase =
-    type === 'AlÄ±ÅŸ';
+    type === 'Alış';
 
   const table =
     isPurchase
@@ -3727,7 +3727,7 @@ async function showInvoiceDetail(
                 )}
                 -
                 ${esc(
-                  p?.name || 'ÃœrÃ¼n'
+                  p?.name || 'Ürün'
                 )}
               </td>
 
@@ -3786,9 +3786,9 @@ async function showInvoiceDetail(
 
       `${
         isPurchase
-          ? 'AlÄ±ÅŸ'
-          : 'SatÄ±ÅŸ'
-      } FaturasÄ± DetayÄ±`,
+          ? 'Alış'
+          : 'Satış'
+      } Faturası Detayı`,
 
       `
 
@@ -3907,7 +3907,7 @@ async function showInvoiceDetail(
 
               <tr>
                 <th>#</th>
-                <th>ÃœrÃ¼n</th>
+                <th>Ürün</th>
                 <th>Miktar</th>
                 <th>Birim Fiyat</th>
                 <th>KDV</th>
@@ -3930,7 +3930,7 @@ async function showInvoiceDetail(
                       colspan="8"
                       style="text-align:center"
                     >
-                      Kalem bulunamadÄ±.
+                      Kalem bulunamadı.
                     </td>
 
                   </tr>
@@ -4007,7 +4007,7 @@ async function showInvoiceDetail(
                   "
                 >
 
-                  TL KarÅŸÄ±lÄ±ÄŸÄ±:
+                  TL Karşılığı:
 
                   <strong>
                     ${money(
@@ -4038,7 +4038,7 @@ async function showInvoiceDetail(
               >
 
                 <strong>
-                  AÃ§Ä±klama
+                  Açıklama
                 </strong>
 
                 <div
@@ -4077,7 +4077,7 @@ async function showInvoiceDetail(
     console.error(e);
 
     toast(
-      'Fatura detayÄ± aÃ§Ä±lamadÄ±: ' +
+      'Fatura detayı açılamadı: ' +
       e.message
     );
 
@@ -4169,7 +4169,7 @@ function renderReports() {
     <div class="report-row">
 
       <span>
-        Toplam alÄ±ÅŸ faturasÄ±
+        Toplam alış faturası
       </span>
 
       <strong>
@@ -4181,7 +4181,7 @@ function renderReports() {
     <div class="report-row">
 
       <span>
-        Toplam satÄ±ÅŸ faturasÄ±
+        Toplam satış faturası
       </span>
 
       <strong>
@@ -4193,7 +4193,7 @@ function renderReports() {
     <div class="report-row">
 
       <span>
-        Toplam alÄ±ÅŸ (TL)
+        Toplam alış (TL)
       </span>
 
       <strong>
@@ -4205,7 +4205,7 @@ function renderReports() {
     <div class="report-row">
 
       <span>
-        Toplam satÄ±ÅŸ (TL)
+        Toplam satış (TL)
       </span>
 
       <strong>
@@ -4217,7 +4217,7 @@ function renderReports() {
     <div class="report-row">
 
       <span>
-        AlÄ±ÅŸ KDV (TL)
+        Alış KDV (TL)
       </span>
 
       <strong>
@@ -4229,7 +4229,7 @@ function renderReports() {
     <div class="report-row">
 
       <span>
-        SatÄ±ÅŸ KDV (TL)
+        Satış KDV (TL)
       </span>
 
       <strong>
@@ -4241,7 +4241,7 @@ function renderReports() {
     <div class="report-row">
 
       <span>
-        SatÄ±ÅŸ - AlÄ±ÅŸ (TL)
+        Satış - Alış (TL)
       </span>
 
       <strong
@@ -4338,7 +4338,7 @@ function exportPurchasesCSV() {
     [
       'Fatura No',
       'Tarih',
-      'TedarikÃ§i',
+      'Tedarikçi',
       'Para Birimi',
       'Kur',
       'Matrah',
@@ -4392,7 +4392,7 @@ function exportSalesCSV() {
     [
       'Fatura No',
       'Tarih',
-      'MÃ¼ÅŸteri',
+      'Müşteri',
       'Para Birimi',
       'Kur',
       'Matrah',
@@ -4441,9 +4441,9 @@ function exportSalesCSV() {
 
 /* =========================================================
    SATIN ALMA SAYFASI
-   Ã–NEMLÄ°:
-   FORM SAYFADA GÄ°ZLÄ°DÄ°R.
-   SADECE + FATURA EKLE TIKLANINCA AÃ‡ILIR.
+   ÖNEMLİ:
+   FORM SAYFADA GİZLİDİR.
+   SADECE + FATURA EKLE TIKLANINCA AÇILIR.
 ========================================================= */
 
 (function () {
@@ -4456,7 +4456,7 @@ function exportSalesCSV() {
     if (!form) return;
 
     /*
-      Form modal iÃ§inde DEÄÄ°LSE
+      Form modal içinde DEĞİLSE
       mutlaka gizle.
     */
 
@@ -4565,7 +4565,7 @@ function exportSalesCSV() {
             <h2
               style="margin:0"
             >
-              ğŸ“¥ SatÄ±n Alma
+              📥 Satın Alma
             </h2>
 
             <p
@@ -4574,7 +4574,7 @@ function exportSalesCSV() {
                 color:#6b7280;
               "
             >
-              KayÄ±tlÄ± alÄ±ÅŸ faturalarÄ±nÄ±zÄ± gÃ¶rÃ¼ntÃ¼leyin
+              Kayıtlı alış faturalarınızı görüntüleyin
               ve yeni fatura ekleyin.
             </p>
 
@@ -4624,8 +4624,8 @@ function exportSalesCSV() {
 
 
     /*
-      Form modal dÄ±ÅŸÄ±nda kaldÄ±ÄŸÄ±nda
-      sayfada gÃ¶rÃ¼nmesini kesin olarak engelle.
+      Form modal dışında kaldığında
+      sayfada görünmesini kesin olarak engelle.
     */
 
     if (
@@ -4679,7 +4679,7 @@ function exportSalesCSV() {
         >
 
           <h2 style="margin:0">
-            ğŸ“‹ AlÄ±ÅŸ FaturalarÄ±
+            📋 Alış Faturaları
           </h2>
 
           <button
@@ -4687,7 +4687,7 @@ function exportSalesCSV() {
             type="button"
             onclick="exportPurchasesCSV()"
           >
-            CSV DÄ±ÅŸa Aktar
+            CSV Dışa Aktar
           </button>
 
         </div>
@@ -4699,7 +4699,7 @@ function exportSalesCSV() {
             text-align:center;
           "
         >
-          HenÃ¼z alÄ±ÅŸ faturasÄ± kaydÄ± yok.
+          Henüz alış faturası kaydı yok.
         </div>
 
       `;
@@ -4721,7 +4721,7 @@ function exportSalesCSV() {
       >
 
         <h2 style="margin:0">
-          ğŸ“‹ AlÄ±ÅŸ FaturalarÄ±
+          📋 Alış Faturaları
         </h2>
 
         <button
@@ -4729,7 +4729,7 @@ function exportSalesCSV() {
           type="button"
           onclick="exportPurchasesCSV()"
         >
-          CSV DÄ±ÅŸa Aktar
+          CSV Dışa Aktar
         </button>
 
       </div>
@@ -4745,7 +4745,7 @@ function exportSalesCSV() {
             <tr>
               <th>Fatura No</th>
               <th>Tarih</th>
-              <th>TedarikÃ§i</th>
+              <th>Tedarikçi</th>
               <th>Para Birimi</th>
               <th>Matrah</th>
               <th>KDV</th>
@@ -4879,7 +4879,7 @@ function exportSalesCSV() {
     ) {
 
       toast(
-        'Yeni fatura formu bulunamadÄ±.'
+        'Yeni fatura formu bulunamadı.'
       );
 
       return;
@@ -4894,7 +4894,7 @@ function exportSalesCSV() {
 
 
     /*
-      Ã–nce formu modal iÃ§ine taÅŸÄ±yoruz.
+      Önce formu modal içine taşıyoruz.
     */
 
     modalForm.innerHTML =
@@ -4906,15 +4906,15 @@ function exportSalesCSV() {
 
 
     /*
-      Formun gÃ¶rÃ¼nmesini burada
-      Ã¶zellikle aÃ§Ä±yoruz.
+      Formun görünmesini burada
+      özellikle açıyoruz.
     */
 
     showPurchaseForm();
 
 
     modalTitle.textContent =
-      'Yeni AlÄ±ÅŸ FaturasÄ±';
+      'Yeni Alış Faturası';
 
     modal.classList.remove(
       'hidden'
@@ -4928,7 +4928,7 @@ function exportSalesCSV() {
 
     setText(
       'purchaseFormTitle',
-      'Yeni AlÄ±ÅŸ FaturasÄ±'
+      'Yeni Alış Faturası'
     );
 
 
@@ -4938,7 +4938,7 @@ function exportSalesCSV() {
     if (saveBtn) {
 
       saveBtn.textContent =
-        'ğŸ’¾ AlÄ±ÅŸ FaturasÄ±nÄ± Kaydet';
+        '💾 Alış Faturasını Kaydet';
 
     }
 
@@ -4970,7 +4970,7 @@ function exportSalesCSV() {
 
 
     /*
-      ModalÄ± kapat.
+      Modalı kapat.
     */
 
     if (modal) {
@@ -4983,7 +4983,7 @@ function exportSalesCSV() {
 
 
     /*
-      Formu modal dÄ±ÅŸÄ±na geri taÅŸÄ±.
+      Formu modal dışına geri taşı.
     */
 
     if (
@@ -5089,7 +5089,7 @@ function exportSalesCSV() {
                     -
 
                     ${esc(
-                      product?.name || 'ÃœrÃ¼n'
+                      product?.name || 'Ürün'
                     )}
 
                   </td>
@@ -5153,7 +5153,7 @@ function exportSalesCSV() {
 
       openModal(
 
-        'AlÄ±ÅŸ FaturasÄ± DetayÄ±',
+        'Alış Faturası Detayı',
 
         `
 
@@ -5199,7 +5199,7 @@ function exportSalesCSV() {
             <div>
 
               <label>
-                TedarikÃ§i
+                Tedarikçi
               </label>
 
               <strong>
@@ -5226,12 +5226,12 @@ function exportSalesCSV() {
                 <tr>
 
                   <th>#</th>
-                  <th>ÃœrÃ¼n</th>
+                  <th>Ürün</th>
                   <th>Miktar</th>
                   <th>Birim Fiyat</th>
                   <th>KDV</th>
                   <th>Matrah</th>
-                  <th>KDV TutarÄ±</th>
+                  <th>KDV Tutarı</th>
                   <th>Toplam</th>
 
                 </tr>
@@ -5251,7 +5251,7 @@ function exportSalesCSV() {
                         colspan="8"
                         style="text-align:center"
                       >
-                        Kalem bulunamadÄ±.
+                        Kalem bulunamadı.
                       </td>
 
                     </tr>
@@ -5334,7 +5334,7 @@ function exportSalesCSV() {
                 >
 
                   <strong>
-                    AÃ§Ä±klama
+                    Açıklama
                   </strong>
 
                   <div
@@ -5378,7 +5378,7 @@ function exportSalesCSV() {
       console.error(e);
 
       toast(
-        'Fatura detayÄ± aÃ§Ä±lamadÄ±: ' +
+        'Fatura detayı açılamadı: ' +
         e.message
       );
 
@@ -5407,7 +5407,7 @@ function exportSalesCSV() {
 
 
   /*
-    Sayfa ilk aÃ§Ä±ldÄ±ÄŸÄ±nda formu
+    Sayfa ilk açıldığında formu
     kesinlikle gizle.
   */
 
@@ -5428,7 +5428,7 @@ function exportSalesCSV() {
 
 
   /*
-    SatÄ±n Alma menÃ¼sÃ¼ne her giriÅŸte
+    Satın Alma menüsüne her girişte
     formu tekrar gizle.
   */
 
@@ -5464,7 +5464,7 @@ function exportSalesCSV() {
 
 
 /* =========================================================
-   ALIÅ / SATIÅ FATURA LÄ°STELERÄ°
+   ALIŞ / SATIŞ FATURA LİSTELERİ
 ========================================================= */
 
 function formatInvoiceDate(value) {
@@ -5496,13 +5496,13 @@ function renderInvoiceList(
   if (!c) return;
 
   const isPurchase =
-    type === 'AlÄ±ÅŸ';
+    type === 'Alış';
 
   if (!invoices.length) {
 
     c.innerHTML = `
       <div class="empty">
-        HenÃ¼z kayÄ±tlÄ± ${isPurchase ? 'satÄ±n alma' : 'satÄ±ÅŸ'} faturasÄ± yok.
+        Henüz kayıtlı ${isPurchase ? 'satın alma' : 'satış'} faturası yok.
       </div>
     `;
 
@@ -5511,7 +5511,7 @@ function renderInvoiceList(
 
   c.innerHTML = `
     <div class="invoice-list-help">
-      FaturayÄ± gÃ¶rÃ¼ntÃ¼leyebilir, deÄŸiÅŸtirebilir veya silebilirsiniz.
+      Faturayı görüntüleyebilir, değiştirebilir veya silebilirsiniz.
     </div>
 
     <div class="table-scroll">
@@ -5520,14 +5520,14 @@ function renderInvoiceList(
           <tr>
             <th>Tarih</th>
             <th>Fatura No</th>
-            <th>Ãœnvan</th>
-            <th>Fatura TÃ¼rÃ¼</th>
+            <th>Ünvan</th>
+            <th>Fatura Türü</th>
             <th>Kur</th>
             <th>Matrah</th>
             <th>KDV</th>
-            <th>Toplam Fatura TutarÄ±</th>
-            <th>TL KarÅŸÄ±lÄ±ÄŸÄ±</th>
-            <th>Ä°ÅŸlem</th>
+            <th>Toplam Fatura Tutarı</th>
+            <th>TL Karşılığı</th>
+            <th>İşlem</th>
           </tr>
         </thead>
 
@@ -5547,7 +5547,7 @@ function renderInvoiceList(
                 <td><strong>${esc(invoice.invoice_no || '-')}</strong></td>
                 <td>${esc(party?.name || '-')}</td>
                 <td>
-                  ${display.currency === 'TRY' ? 'TL Fatura' : `DÃ¶viz (${display.currency})`}
+                  ${display.currency === 'TRY' ? 'TL Fatura' : `Döviz (${display.currency})`}
                 </td>
                 <td>
                   ${display.currency === 'TRY' ? '-' : `1 ${display.currency} = ${moneyCode(display.rate, 'TRY')}`}
@@ -5567,7 +5567,7 @@ function renderInvoiceList(
                       type="button"
                       onclick="showInvoiceDetail('${type}','${invoice.id}')"
                     >
-                      GÃ¶ster
+                      Göster
                     </button>
 
                     <button
@@ -5575,7 +5575,7 @@ function renderInvoiceList(
                       type="button"
                       onclick="${isPurchase ? 'editPurchaseInvoice' : 'editSaleInvoice'}('${invoice.id}')"
                     >
-                      DeÄŸiÅŸtir
+                      Değiştir
                     </button>
 
                     <button
@@ -5604,7 +5604,7 @@ function renderPurchaseInvoices() {
   renderInvoiceList(
     'purchaseInvoicesTable',
     purchases,
-    'AlÄ±ÅŸ'
+    'Alış'
   );
 
 }
@@ -5615,7 +5615,7 @@ function renderSaleInvoices() {
   renderInvoiceList(
     'saleInvoicesTable',
     sales,
-    'SatÄ±ÅŸ'
+    'Satış'
   );
 
 }
@@ -5632,7 +5632,7 @@ function openPurchaseForm() {
 
   if ($('savePurchaseBtn')) {
     $('savePurchaseBtn').textContent =
-      'ğŸ’¾ AlÄ±ÅŸ FaturasÄ±nÄ± Kaydet';
+      '💾 Alış Faturasını Kaydet';
   }
 
   $('purchaseFormArea')?.classList.remove(
@@ -5692,7 +5692,7 @@ function openSaleForm() {
 
   if ($('saveSaleBtn')) {
     $('saveSaleBtn').textContent =
-      'ğŸ’¾ SatÄ±ÅŸ FaturasÄ±nÄ± Kaydet';
+      '💾 Satış Faturasını Kaydet';
   }
 
   $('saleFormArea')?.classList.remove(
@@ -5803,7 +5803,7 @@ function validateStockChanges(changes) {
     );
 
     if (!product) {
-      throw new Error('Faturadaki Ã¼rÃ¼nlerden biri bulunamadÄ±.');
+      throw new Error('Faturadaki ürünlerden biri bulunamadı.');
     }
 
     if (
@@ -5811,7 +5811,7 @@ function validateStockChanges(changes) {
       change < 0
     ) {
       throw new Error(
-        `${product.name} iÃ§in iÅŸlem sonrasÄ± stok eksiye dÃ¼ÅŸeceÄŸi iÃ§in fatura deÄŸiÅŸtirilemez veya silinemez.`
+        `${product.name} için işlem sonrası stok eksiye düşeceği için fatura değiştirilemez veya silinemez.`
       );
     }
 
@@ -5880,7 +5880,7 @@ async function editPurchaseInvoice(id) {
     );
 
     if (!invoice) {
-      throw new Error('AlÄ±ÅŸ faturasÄ± bulunamadÄ±.');
+      throw new Error('Alış faturası bulunamadı.');
     }
 
     const result = await db
@@ -5899,7 +5899,7 @@ async function editPurchaseInvoice(id) {
 
       return {
         product_id: item.product_id,
-        product_name: product?.name || 'ÃœrÃ¼n',
+        product_name: product?.name || 'Ürün',
         code: product?.code || '-',
         quantity: num(item.quantity),
         unit_price: num(item.unit_price),
@@ -5935,7 +5935,7 @@ async function editPurchaseInvoice(id) {
 
     if ($('savePurchaseBtn')) {
       $('savePurchaseBtn').textContent =
-        'ğŸ’¾ AlÄ±ÅŸ FaturasÄ±nÄ± GÃ¼ncelle';
+        '💾 Alış Faturasını Güncelle';
     }
 
     $('purchaseFormArea')?.scrollIntoView({
@@ -5945,7 +5945,7 @@ async function editPurchaseInvoice(id) {
 
   } catch (error) {
     console.error(error);
-    toast('Fatura deÄŸiÅŸiklik iÃ§in aÃ§Ä±lamadÄ±: ' + error.message);
+    toast('Fatura değişiklik için açılamadı: ' + error.message);
   }
 
 }
@@ -5960,7 +5960,7 @@ async function editSaleInvoice(id) {
     );
 
     if (!invoice) {
-      throw new Error('SatÄ±ÅŸ faturasÄ± bulunamadÄ±.');
+      throw new Error('Satış faturası bulunamadı.');
     }
 
     const result = await db
@@ -5979,7 +5979,7 @@ async function editSaleInvoice(id) {
 
       return {
         product_id: item.product_id,
-        product_name: product?.name || 'ÃœrÃ¼n',
+        product_name: product?.name || 'Ürün',
         code: product?.code || '-',
         quantity: num(item.quantity),
         unit_price: num(item.unit_price),
@@ -6015,7 +6015,7 @@ async function editSaleInvoice(id) {
 
     if ($('saveSaleBtn')) {
       $('saveSaleBtn').textContent =
-        'ğŸ’¾ SatÄ±ÅŸ FaturasÄ±nÄ± GÃ¼ncelle';
+        '💾 Satış Faturasını Güncelle';
     }
 
     $('saleFormArea')?.scrollIntoView({
@@ -6025,7 +6025,7 @@ async function editSaleInvoice(id) {
 
   } catch (error) {
     console.error(error);
-    toast('Fatura deÄŸiÅŸiklik iÃ§in aÃ§Ä±lamadÄ±: ' + error.message);
+    toast('Fatura değişiklik için açılamadı: ' + error.message);
   }
 
 }
@@ -6104,7 +6104,7 @@ async function updatePurchaseInvoice(
 
     const partyName = parties.find(
       x => x.id === data.partyId
-    )?.name || 'TedarikÃ§i belirtilmedi';
+    )?.name || 'Tedarikçi belirtilmedi';
 
     const movementResult = await db
       .from('stock_movements')
@@ -6115,19 +6115,19 @@ async function updatePurchaseInvoice(
         quantity: item.quantity,
         source_type: 'purchase',
         source_id: id,
-        note: `${partyName} firmasÄ±ndan satÄ±n alma${data.invoiceNo ? ` - Fatura: ${data.invoiceNo}` : ''}`
+        note: `${partyName} firmasından satın alma${data.invoiceNo ? ` - Fatura: ${data.invoiceNo}` : ''}`
       })));
 
     if (movementResult.error) throw movementResult.error;
 
     editingPurchaseId = null;
-    toast('AlÄ±ÅŸ faturasÄ± gÃ¼ncellendi.');
+    toast('Alış faturası güncellendi.');
     clearPurchase();
     await loadAll();
 
   } catch (error) {
     console.error(error);
-    toast('AlÄ±ÅŸ faturasÄ± gÃ¼ncellenemedi: ' + error.message);
+    toast('Alış faturası güncellenemedi: ' + error.message);
   }
 
 }
@@ -6206,7 +6206,7 @@ async function updateSaleInvoice(
 
     const partyName = parties.find(
       x => x.id === data.partyId
-    )?.name || 'MÃ¼ÅŸteri belirtilmedi';
+    )?.name || 'Müşteri belirtilmedi';
 
     const movementResult = await db
       .from('stock_movements')
@@ -6217,19 +6217,19 @@ async function updateSaleInvoice(
         quantity: item.quantity,
         source_type: 'sale',
         source_id: id,
-        note: `${partyName} firmasÄ±na satÄ±ÅŸ${data.invoiceNo ? ` - Fatura: ${data.invoiceNo}` : ''}`
+        note: `${partyName} firmasına satış${data.invoiceNo ? ` - Fatura: ${data.invoiceNo}` : ''}`
       })));
 
     if (movementResult.error) throw movementResult.error;
 
     editingSaleId = null;
-    toast('SatÄ±ÅŸ faturasÄ± gÃ¼ncellendi.');
+    toast('Satış faturası güncellendi.');
     clearSale();
     await loadAll();
 
   } catch (error) {
     console.error(error);
-    toast('SatÄ±ÅŸ faturasÄ± gÃ¼ncellenemedi: ' + error.message);
+    toast('Satış faturası güncellenemedi: ' + error.message);
   }
 
 }
@@ -6244,9 +6244,9 @@ async function deleteInvoice(
     type === 'purchase';
 
   const warning =
-    'Bu faturayÄ± silmek istediÄŸinize emin misiniz?\n\n' +
-    'Fatura silindiÄŸinde ilgili stok giriÅŸ/Ã§Ä±kÄ±ÅŸlarÄ± geri alÄ±nacaktÄ±r. ' +
-    'HatalÄ± silme iÅŸlemi stok kayÄ±tlarÄ±nÄ± etkileyebilir.';
+    'Bu faturayı silmek istediğinize emin misiniz?\n\n' +
+    'Fatura silindiğinde ilgili stok giriş/çıkışları geri alınacaktır. ' +
+    'Hatalı silme işlemi stok kayıtlarını etkileyebilir.';
 
   if (!confirm(warning)) return;
 
@@ -6303,7 +6303,7 @@ async function deleteInvoice(
     if (invoiceDelete.error) throw invoiceDelete.error;
 
     toast(
-      `${isPurchase ? 'AlÄ±ÅŸ' : 'SatÄ±ÅŸ'} faturasÄ± silindi ve stok gÃ¼ncellendi.`
+      `${isPurchase ? 'Alış' : 'Satış'} faturası silindi ve stok güncellendi.`
     );
 
     await loadAll();
@@ -6340,7 +6340,7 @@ window.closeSaleForm =
 
 
 /* =========================================================
-   BAÅLAT
+   BAŞLAT
 ========================================================= */
 
 document.addEventListener(
@@ -6381,8 +6381,8 @@ document.addEventListener(
     ) {
 
       /*
-        EÄŸer satÄ±n alma formu aÃ§Ä±ksa
-        Ã¶nce onu dÃ¼zgÃ¼n ÅŸekilde kapat.
+        Eğer satın alma formu açıksa
+        önce onu düzgün şekilde kapat.
       */
 
       if (
